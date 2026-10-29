@@ -37,10 +37,10 @@ export default function VelascoLogo({ className = "h-10", iconOnly = false, ligh
       </svg>
 
       {!iconOnly && (
-        <div className="flex flex-col">
+        <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-1.5">
             <span
-              className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight leading-none ${
+              className={`font-display font-black text-lg sm:text-2xl tracking-tight leading-none truncate ${
                 lightText ? 'text-white' : 'text-clinic-dark'
               }`}
             >
@@ -48,7 +48,7 @@ export default function VelascoLogo({ className = "h-10", iconOnly = false, ligh
             </span>
           </div>
           <span
-            className={`text-[10px] sm:text-[11px] font-semibold tracking-wider uppercase mt-1 leading-none ${
+            className={`text-[9px] sm:text-[11px] font-bold tracking-wider uppercase mt-1 leading-none truncate ${
               lightText ? 'text-emerald-300/90' : 'text-slate-500'
             }`}
           >

@@ -591,7 +591,7 @@ export default function App() {
           BARRA SUPERIOR GLOBAL CON LOGO, SALIR Y ROL DE PERSONAL
          ======================================================== */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-soft-sm">
-        <div className="max-w-5xl w-full mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-3">
+        <div className="max-w-6xl w-full mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
           
           {/* Logo brand (Click takes patient to home) */}
           <div 
@@ -601,27 +601,27 @@ export default function App() {
                 setEmergencySubMode(null); 
               }
             }}
-            className="flex items-center gap-3 cursor-pointer"
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink min-w-0"
           >
-            <VelascoLogo iconOnly={false} className="h-9 sm:h-10" />
+            <VelascoLogo iconOnly={false} className="h-8 sm:h-10" />
           </div>
 
           {/* Header Right Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             
             {/* 1. Botón visible de Salir / Cerrar Sesión (Para Paciente) */}
             {systemRole === 'paciente' && userProfile && (
-              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/90 pl-3 pr-1.5 py-1 rounded-full text-xs shadow-soft-sm">
-                <span className="font-semibold text-slate-700 hidden sm:inline">
-                  Hola, <strong className="text-clinic-dark">{userProfile.name.split(' ')[0]}</strong>
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200/90 pl-2 sm:pl-3 pr-1 sm:pr-1.5 py-1 rounded-full text-xs shadow-soft-sm">
+                <span className="font-bold text-slate-700 hidden md:inline text-xs">
+                  Hola, <strong className="text-clinic-dark font-extrabold">{userProfile.name.split(' ')[0]}</strong>
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs transition-colors cursor-pointer border border-red-200/60"
+                  className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full bg-red-50 hover:bg-red-100 text-red-700 font-bold text-[11px] sm:text-xs transition-colors cursor-pointer border border-red-200/60"
                   title="Cerrar sesión del paciente"
                 >
-                  <LogOut className="w-3.5 h-3.5 text-red-600" />
-                  <span>Salir</span>
+                  <LogOut className="w-3 h-3 text-red-600" />
+                  <span className="hidden xs:inline sm:inline">Salir</span>
                 </button>
               </div>
             )}
@@ -629,7 +629,7 @@ export default function App() {
             {/* 2. Botón Selector de Rol / Modo Personal Clínico */}
             <button
               onClick={() => setShowRoleSelectorModal(true)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer border ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer border ${
                 systemRole === 'paciente'
                   ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200 shadow-soft-sm'
                   : 'bg-clinic-dark text-white border-clinic-dark shadow-md ring-2 ring-clinic-emerald/30'
@@ -637,11 +637,11 @@ export default function App() {
               title="Cambiar entre Vista Paciente y Paneles del Personal"
             >
               <Shield className={`w-3.5 h-3.5 ${systemRole === 'paciente' ? 'text-clinic-emerald' : 'text-emerald-400'}`} />
-              <span className="hidden md:inline">
-                {systemRole === 'paciente' ? 'Acceso Personal / Admin' : `Rol: ${systemRole.toUpperCase()}`}
+              <span className="hidden sm:inline">
+                {systemRole === 'paciente' ? 'Acceso Personal' : `Rol: ${systemRole.toUpperCase()}`}
               </span>
-              <span className="md:hidden">
-                {systemRole === 'paciente' ? 'Staff' : systemRole.slice(0, 3).toUpperCase()}
+              <span className="sm:hidden text-[10px] uppercase tracking-wider">
+                {systemRole === 'paciente' ? 'Staff' : systemRole.slice(0, 3)}
               </span>
             </button>
 
@@ -653,10 +653,11 @@ export default function App() {
                 setEmergencySubMode(null); 
                 setPreAlertSuccess(false); 
               }}
-              className="flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 sm:py-2.5 bg-clinic-red hover:bg-clinic-redHover text-white text-xs sm:text-sm font-black rounded-2xl shadow-emergency-glow active:scale-95 transition-all cursor-pointer"
+              className="flex items-center gap-1 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2.5 bg-clinic-red hover:bg-clinic-redHover text-white text-[11px] sm:text-sm font-black rounded-xl sm:rounded-2xl shadow-emergency-glow active:scale-95 transition-all cursor-pointer shrink-0"
             >
-              <Siren className="w-4 h-4 animate-pulse" />
-              <span>🚨 SOS 24h</span>
+              <Siren className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-pulse" />
+              <span className="hidden xs:inline">🚨 SOS 24h</span>
+              <span className="xs:hidden">SOS</span>
             </button>
 
           </div>
@@ -829,7 +830,7 @@ export default function App() {
                         type="tel"
                         value={inputPhone}
                         onChange={(e) => setInputPhone(e.target.value)}
-                        placeholder="Ej. 728-12345"
+                        placeholder="Ej. 69400096"
                         className="w-full pl-10 pr-3 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinic-emerald transition-all"
                       />
                     </div>
@@ -941,37 +942,42 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                   {specialtiesList.map((spec) => (
                     <div
                       key={spec.id}
                       onClick={() => handleOpenSpecialtyBooking(spec)}
-                      className="bg-white hover:bg-emerald-50/40 rounded-3xl p-5 border border-slate-200/90 hover:border-clinic-emerald/50 shadow-soft-sm hover:shadow-soft-md transition-all duration-200 cursor-pointer flex items-center justify-between group active:scale-[0.99]"
+                      className="bg-white hover:bg-emerald-50/40 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-200/90 hover:border-clinic-emerald/50 shadow-soft-sm hover:shadow-xl hover:shadow-emerald-900/5 transition-all duration-300 cursor-pointer flex items-center justify-between group active:scale-[0.99]"
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-clinic-light text-clinic-dark flex items-center justify-center shrink-0 group-hover:bg-clinic-emerald group-hover:text-white transition-colors">
-                          {getSpecialtyIcon(spec.icon)}
+                      <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-clinic-light text-clinic-dark flex items-center justify-center shrink-0 group-hover:bg-clinic-emerald group-hover:text-white transition-all shadow-inner">
+                          {getSpecialtyIcon(spec.icon, "w-6 h-6 sm:w-7 sm:h-7")}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-extrabold text-base text-slate-900 group-hover:text-clinic-dark transition-colors">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                            <h4 className="font-extrabold text-base sm:text-lg text-slate-900 group-hover:text-clinic-dark transition-colors leading-tight">
                               {spec.name}
                             </h4>
-                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 whitespace-nowrap">
                               {spec.status}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-600 font-medium mt-0.5">
+                          <p className="text-xs sm:text-sm text-slate-600 font-semibold mt-0.5 truncate">
                             {spec.doctor}
                           </p>
-                          <p className="text-[11px] text-clinic-emerald font-semibold flex items-center gap-1 mt-0.5">
-                            <Building2 className="w-3 h-3 text-slate-400" />
-                            <span>{spec.room}</span>
-                          </p>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            <span className="text-[11px] text-clinic-emerald font-bold flex items-center gap-1 bg-emerald-50/80 px-2 py-0.5 rounded-lg border border-emerald-100">
+                              <Building2 className="w-3 h-3 text-clinic-emerald shrink-0" />
+                              <span className="truncate">{spec.room}</span>
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
+                              • {spec.hours.length} horarios hoy
+                            </span>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="w-9 h-9 rounded-xl bg-slate-50 group-hover:bg-clinic-emerald group-hover:text-white text-slate-400 flex items-center justify-center transition-all shrink-0">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-slate-50 group-hover:bg-clinic-emerald group-hover:text-white text-slate-400 flex items-center justify-center transition-all shrink-0 ml-2">
                         <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
                       </div>
                     </div>
@@ -1303,85 +1309,118 @@ export default function App() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {appointments.map((ticket) => (
                     <div
                       key={ticket.id}
-                      className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-soft-sm space-y-4 flex flex-col justify-between"
+                      className="bg-white rounded-3xl border border-slate-200/90 shadow-xl shadow-emerald-950/5 overflow-hidden flex flex-col justify-between transition-all hover:shadow-2xl hover:shadow-emerald-900/10"
                     >
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between">
-                          <span className="text-xs font-black text-clinic-emerald tracking-wider uppercase bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-lg">
-                            Ficha {ticket.id}
-                          </span>
-                          <div className="text-right">
-                            <span className="text-xs font-black text-clinic-dark bg-clinic-light px-2.5 py-1 rounded-xl inline-block">
-                              {ticket.hour}
+                      {/* Ticket Header Estilo Boarding Pass */}
+                      <div className="bg-gradient-to-r from-clinic-dark to-emerald-800 p-4 sm:p-5 text-white flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center font-bold text-xs">
+                            CV
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase tracking-widest text-emerald-300 font-black block">
+                              Pase Médico Digital
                             </span>
-                            <span className="text-[10px] text-slate-400 font-bold block mt-1">
-                              {ticket.date}
+                            <span className="text-sm sm:text-base font-extrabold tracking-tight">
+                              Ficha {ticket.id}
                             </span>
                           </div>
                         </div>
 
-                        <div>
-                          <h3 className="font-extrabold text-slate-900 text-base leading-snug">
-                            {ticket.specialty}
-                          </h3>
-                          <p className="text-xs text-slate-600 font-semibold mt-0.5">
-                            {ticket.doctor}
-                          </p>
-                          <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                            🚪 {ticket.room}
-                          </p>
-                          
-                          {/* Guía de ubicación para orientar al paciente */}
-                          <div className="mt-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-700 flex items-start gap-2">
-                            <Compass className="w-4 h-4 text-clinic-dark shrink-0 mt-0.5" />
-                            <div>
-                              <strong className="block text-slate-900">Cómo llegar al consultorio:</strong>
-                              <span>{ticket.locationGuide || 'Consultar en recepción principal de Planta Baja.'}</span>
-                            </div>
-                          </div>
-
-                          {/* Estado del voucher y verificación */}
-                          <div className="mt-2.5 p-2 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-[11px] space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span className="text-slate-500 font-semibold flex items-center gap-1">
-                                <Receipt className="w-3.5 h-3.5 text-clinic-emerald" />
-                                Comprobante:
-                              </span>
-                              <span className="font-bold text-slate-800">{ticket.voucherRef || 'Registrado'}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-slate-500 font-semibold">Estado de Pago:</span>
-                              <span className={`font-extrabold ${ticket.paymentStatus === 'Verificado y Aprobado' ? 'text-emerald-700' : 'text-amber-700'}`}>
-                                {ticket.paymentStatus || 'Pendiente de Verificación Admin'}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Estado del turno en vivo */}
-                          {ticket.status && (
-                            <div className="mt-2">
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                ticket.status.includes('Llamando')
-                                  ? 'bg-amber-100 text-amber-900 animate-pulse border border-amber-300'
-                                  : ticket.status === 'Atendido'
-                                  ? 'bg-slate-100 text-slate-600'
-                                  : 'bg-emerald-100 text-emerald-800'
-                              }`}>
-                                Estado: {ticket.status}
-                              </span>
-                            </div>
-                          )}
+                        <div className="text-right">
+                          <span className="text-xs sm:text-sm font-black bg-white/20 backdrop-blur-sm px-3 py-1 rounded-xl inline-block border border-white/20">
+                            {ticket.hour}
+                          </span>
+                          <span className="text-[10px] text-emerald-200 font-semibold block mt-1">
+                            {ticket.date}
+                          </span>
                         </div>
                       </div>
 
-                      <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2">
+                      {/* Ticket Body con Detalles Clínicos */}
+                      <div className="p-5 sm:p-6 space-y-4">
+                        
+                        <div>
+                          <span className="text-[10px] font-black uppercase tracking-wider text-clinic-emerald bg-emerald-50 px-2.5 py-0.5 rounded-full inline-block mb-1">
+                            {ticket.specialty}
+                          </span>
+                          <h3 className="font-display font-extrabold text-slate-900 text-lg sm:text-xl leading-snug">
+                            {ticket.doctor}
+                          </h3>
+                          <p className="text-xs font-bold text-slate-600 mt-1 flex items-center gap-1.5">
+                            <Building2 className="w-4 h-4 text-clinic-dark shrink-0" />
+                            <span>{ticket.room}</span>
+                          </p>
+                        </div>
+
+                        {/* Línea perforada decorativa estilo Ticket */}
+                        <div className="relative py-1">
+                          <div className="border-t-2 border-dashed border-slate-200"></div>
+                          <div className="absolute -left-7 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-clinic-pearl border-r border-slate-200"></div>
+                          <div className="absolute -right-7 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-clinic-pearl border-l border-slate-200"></div>
+                        </div>
+
+                        {/* Guía de ubicación para orientar al paciente */}
+                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 space-y-1">
+                          <div className="flex items-center gap-1.5 font-bold text-slate-900 text-[11px] uppercase tracking-wide">
+                            <Compass className="w-3.5 h-3.5 text-clinic-dark shrink-0" />
+                            <span>Cómo llegar a su consultorio:</span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 leading-relaxed pl-5">
+                            {ticket.locationGuide || 'Consultar en recepción principal de Planta Baja.'}
+                          </p>
+                        </div>
+
+                        {/* Estado del voucher y verificación */}
+                        <div className="p-3 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 text-xs space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 font-semibold flex items-center gap-1 text-[11px]">
+                              <Receipt className="w-3.5 h-3.5 text-clinic-emerald shrink-0" />
+                              Nº Comprobante:
+                            </span>
+                            <span className="font-bold text-slate-800 text-[11px] truncate max-w-[180px]">
+                              {ticket.voucherRef || 'Registrado'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between pt-1 border-t border-emerald-100">
+                            <span className="text-slate-500 font-semibold text-[11px]">Estado de Verificación:</span>
+                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                              ticket.paymentStatus === 'Verificado y Aprobado' 
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                                : 'bg-amber-100 text-amber-900 border border-amber-200 animate-pulse'
+                            }`}>
+                              {ticket.paymentStatus === 'Verificado y Aprobado' ? '✓ Pago Aprobado' : '⏳ Pendiente Admin'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Estado del turno en vivo */}
+                        {ticket.status && (
+                          <div className="flex items-center justify-between text-xs pt-1">
+                            <span className="text-slate-400 font-semibold text-[11px]">Turno en Recepción:</span>
+                            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                              ticket.status.includes('Llamando')
+                                ? 'bg-amber-100 text-amber-900 animate-pulse border border-amber-300'
+                                : ticket.status === 'Atendido'
+                                ? 'bg-slate-100 text-slate-600'
+                                : 'bg-emerald-100 text-emerald-800'
+                            }`}>
+                              {ticket.status}
+                            </span>
+                          </div>
+                        )}
+
+                      </div>
+
+                      {/* Ticket Footer Acciones */}
+                      <div className="p-4 bg-slate-50 border-t border-slate-100 flex flex-col xs:flex-row sm:flex-row items-center justify-between gap-2">
                         <button
                           onClick={() => handleSendVoucherToAdmin(ticket)}
-                          className="w-full sm:flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-clinic-emerald text-white hover:bg-clinic-emeraldHover font-bold text-xs transition-colors cursor-pointer shadow-soft-sm"
+                          className="w-full sm:flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-clinic-emerald text-white hover:bg-clinic-emeraldHover font-bold text-xs transition-colors cursor-pointer shadow-sm"
                           title="Enviar comprobante al administrador por WhatsApp"
                         >
                           <Send className="w-3.5 h-3.5" />
@@ -1389,11 +1428,11 @@ export default function App() {
                         </button>
                         <button
                           onClick={() => handleShareWhatsAppTicket(ticket)}
-                          className="w-full sm:w-auto flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs transition-colors cursor-pointer"
+                          className="w-full sm:w-auto flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-xs transition-colors cursor-pointer shadow-soft-sm"
                           title="Compartir o guardar comprobante"
                         >
                           <Share2 className="w-3.5 h-3.5" />
-                          <span>Ver Ficha</span>
+                          <span>Ficha WhatsApp</span>
                         </button>
                       </div>
                     </div>
@@ -1461,70 +1500,134 @@ export default function App() {
             {appointments.length === 0 ? (
               <p className="text-xs text-slate-500 text-center py-6">No hay citas registradas en el sistema actualmente.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                      <th className="py-2.5 px-3">Ficha</th>
-                      <th className="py-2.5 px-3">Paciente / Celular</th>
-                      <th className="py-2.5 px-3">Especialidad / Médico</th>
-                      <th className="py-2.5 px-3">Fecha y Hora</th>
-                      <th className="py-2.5 px-3">Comprobante Voucher</th>
-                      <th className="py-2.5 px-3">Estado de Pago</th>
-                      <th className="py-2.5 px-3 text-right">Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium">
-                    {appointments.map((app) => (
-                      <tr key={app.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-3 px-3 font-extrabold text-clinic-dark whitespace-nowrap">
-                          {app.id}
-                        </td>
-                        <td className="py-3 px-3">
-                          <strong className="block text-slate-900">{app.patientName}</strong>
-                          <span className="text-slate-500 text-[11px]">{app.patientPhone}</span>
-                        </td>
-                        <td className="py-3 px-3">
-                          <span className="font-bold text-slate-800">{app.specialty}</span>
-                          <span className="block text-[11px] text-slate-500">{app.doctor} ({app.room})</span>
-                        </td>
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          <span className="font-bold text-clinic-emerald">{app.hour}</span>
-                          <span className="block text-[11px] text-slate-400">{app.date}</span>
-                        </td>
-                        <td className="py-3 px-3">
-                          <span className="inline-flex items-center gap-1 font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-lg text-[11px]">
-                            <Receipt className="w-3 h-3 text-clinic-emerald" />
+              <div>
+                {/* 1. Vista Móvil: Tarjetas Apiladas (md:hidden) */}
+                <div className="grid grid-cols-1 gap-3.5 md:hidden">
+                  {appointments.map((app) => (
+                    <div 
+                      key={app.id}
+                      className="bg-slate-50 p-4 rounded-2xl border border-slate-200/90 space-y-3"
+                    >
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                        <span className="font-black text-clinic-dark text-xs bg-clinic-light px-2.5 py-0.5 rounded-lg">
+                          Ficha {app.id}
+                        </span>
+                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                          app.paymentStatus === 'Verificado y Aprobado'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800 animate-pulse'
+                        }`}>
+                          {app.paymentStatus || 'Pendiente'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Paciente:</span>
+                          <span className="font-bold text-slate-900 text-right">{app.patientName} ({app.patientPhone})</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Consulta:</span>
+                          <span className="font-semibold text-slate-800 text-right">{app.specialty} • {app.doctor}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Horario:</span>
+                          <span className="font-bold text-clinic-emerald">{app.hour} ({app.date})</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1">
+                          <span className="text-slate-400 flex items-center gap-1">
+                            <Receipt className="w-3 h-3 text-clinic-emerald" /> Voucher:
+                          </span>
+                          <span className="font-bold text-slate-800 bg-white px-2 py-0.5 rounded-md border border-slate-200 text-[11px] truncate max-w-[180px]">
                             {app.voucherRef || 'Sin comprobante'}
                           </span>
-                        </td>
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                            app.paymentStatus === 'Verificado y Aprobado'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-amber-100 text-amber-800 animate-pulse'
-                          }`}>
-                            {app.paymentStatus || 'Pendiente de Verificación'}
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2">
+                        {app.paymentStatus !== 'Verificado y Aprobado' ? (
+                          <button
+                            onClick={() => handleAdminVerifyPayment(app.id)}
+                            className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer text-center"
+                          >
+                            ✓ Aprobar Pago y Ficha
+                          </button>
+                        ) : (
+                          <span className="w-full py-1.5 text-xs text-emerald-700 font-bold bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Pago Verificado
                           </span>
-                        </td>
-                        <td className="py-3 px-3 text-right whitespace-nowrap">
-                          {app.paymentStatus !== 'Verificado y Aprobado' ? (
-                            <button
-                              onClick={() => handleAdminVerifyPayment(app.id)}
-                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg shadow-sm transition-all cursor-pointer"
-                            >
-                              ✓ Aprobar Pago
-                            </button>
-                          ) : (
-                            <span className="text-[11px] text-emerald-600 font-bold flex items-center justify-end gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Aprobado
-                            </span>
-                          )}
-                        </td>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 2. Vista Escritorio: Tabla Completa (hidden md:block) */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                        <th className="py-2.5 px-3">Ficha</th>
+                        <th className="py-2.5 px-3">Paciente / Celular</th>
+                        <th className="py-2.5 px-3">Especialidad / Médico</th>
+                        <th className="py-2.5 px-3">Fecha y Hora</th>
+                        <th className="py-2.5 px-3">Comprobante Voucher</th>
+                        <th className="py-2.5 px-3">Estado de Pago</th>
+                        <th className="py-2.5 px-3 text-right">Acción</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {appointments.map((app) => (
+                        <tr key={app.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="py-3 px-3 font-extrabold text-clinic-dark whitespace-nowrap">
+                            {app.id}
+                          </td>
+                          <td className="py-3 px-3">
+                            <strong className="block text-slate-900">{app.patientName}</strong>
+                            <span className="text-slate-500 text-[11px]">{app.patientPhone}</span>
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className="font-bold text-slate-800">{app.specialty}</span>
+                            <span className="block text-[11px] text-slate-500">{app.doctor} ({app.room})</span>
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className="font-bold text-clinic-emerald">{app.hour}</span>
+                            <span className="block text-[11px] text-slate-400">{app.date}</span>
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className="inline-flex items-center gap-1 font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-lg text-[11px]">
+                              <Receipt className="w-3 h-3 text-clinic-emerald" />
+                              {app.voucherRef || 'Sin comprobante'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                              app.paymentStatus === 'Verificado y Aprobado'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-amber-100 text-amber-800 animate-pulse'
+                            }`}>
+                              {app.paymentStatus || 'Pendiente de Verificación'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-right whitespace-nowrap">
+                            {app.paymentStatus !== 'Verificado y Aprobado' ? (
+                              <button
+                                onClick={() => handleAdminVerifyPayment(app.id)}
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg shadow-sm transition-all cursor-pointer"
+                              >
+                                ✓ Aprobar Pago
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-emerald-600 font-bold flex items-center justify-end gap-1">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Aprobado
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>
@@ -2028,23 +2131,62 @@ export default function App() {
               </div>
             </div>
 
-            {/* SECCIÓN OBLIGATORIA: COMPROBANTE DE PAGO / TRANSFERENCIA */}
-            <div className="p-3.5 bg-slate-50 rounded-2xl border-2 border-dashed border-emerald-300 space-y-3">
-              <div className="flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-clinic-emerald" />
-                <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                  Comprobante de Pago Obligatorio
-                </span>
+            {/* SECCIÓN OBLIGATORIA: COMPROBANTE DE PAGO / TRANSFERENCIA / QR */}
+            <div className="p-4 bg-gradient-to-b from-emerald-50/50 to-slate-50 rounded-2xl border-2 border-emerald-300/80 shadow-inner space-y-3.5">
+              
+              {/* Header de Pago y Monto de Consulta */}
+              <div className="flex items-center justify-between pb-2.5 border-b border-emerald-200/60">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-clinic-emerald text-white flex items-center justify-center">
+                    <Receipt className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black text-slate-900 uppercase tracking-wider block">
+                      Pago de Consulta
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-medium">Transferencia Bancaria o QR Simple</span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Monto</span>
+                  <span className="text-sm font-black text-clinic-dark bg-white px-2.5 py-0.5 rounded-lg border border-emerald-200 inline-block shadow-sm">
+                    Bs. 150
+                  </span>
+                </div>
               </div>
-              <p className="text-[11px] text-slate-500 leading-tight">
-                Para confirmar su turno médico debe adjuntar o ingresar el comprobante de transferencia bancaria / QR.
-              </p>
+
+              {/* Tarjeta Visual de QR Simple Interactivo */}
+              <div className="bg-white p-3 rounded-xl border border-slate-200/80 flex items-center gap-3 shadow-soft-sm">
+                <div className="w-16 h-16 bg-slate-900 rounded-xl flex items-center justify-center text-white shrink-0 p-1.5 relative overflow-hidden group">
+                  <div className="w-full h-full border-2 border-white/80 rounded-lg flex flex-col items-center justify-center p-1 bg-white">
+                    <div className="w-3 h-3 bg-slate-900 rounded-sm self-start"></div>
+                    <div className="w-4 h-1 bg-clinic-emerald my-0.5"></div>
+                    <div className="w-3 h-3 bg-slate-900 rounded-sm self-end"></div>
+                  </div>
+                  <span className="absolute bottom-0 inset-x-0 bg-clinic-dark text-[8px] font-black text-center text-white py-0.5">
+                    QR OFICIAL
+                  </span>
+                </div>
+                <div className="text-[11px] leading-tight">
+                  <strong className="block text-slate-900 font-bold">Banco Nacional de Bolivia (BNB)</strong>
+                  <span className="text-slate-600">Cuenta: <strong>Clínica Velasco S.R.L.</strong></span>
+                  <span className="text-slate-500 block text-[10px] mt-0.5">Trinidad • NIT: 1028394021</span>
+                </div>
+              </div>
 
               {/* Input de número de voucher o transacción */}
               <div className="space-y-1">
-                <label className="block text-[11px] font-bold text-slate-700">
-                  Nº de Operación / Código de Transferencia:
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-bold text-slate-700">
+                    Nº de Operación / Código de Transferencia:
+                  </label>
+                  {voucherNumber.trim() && (
+                    <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
+                      <CheckCircle2 className="w-3 h-3" /> Registrado
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
                   value={voucherNumber}
@@ -2053,21 +2195,59 @@ export default function App() {
                     if (voucherError) setVoucherError('');
                   }}
                   placeholder="Ej. OP-984321 / Ref. 44521"
-                  className="w-full px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-clinic-emerald"
+                  className={`w-full px-3 py-2 bg-white rounded-xl border text-xs font-semibold focus:outline-none transition-all ${
+                    voucherNumber.trim() 
+                      ? 'border-clinic-emerald ring-2 ring-clinic-emerald/20 bg-emerald-50/20' 
+                      : 'border-slate-200 focus:ring-2 focus:ring-clinic-emerald'
+                  }`}
                 />
               </div>
 
-              {/* Botón o input de archivo */}
+              {/* Zona de carga moderna (Dropzone-like) */}
               <div className="space-y-1">
                 <label className="block text-[11px] font-bold text-slate-700">
-                  O subir foto del comprobante:
+                  O adjuntar captura de la transferencia:
                 </label>
-                <div className="flex items-center gap-2">
-                  <label className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors">
-                    <Upload className="w-3.5 h-3.5 text-clinic-emerald" />
-                    <span className="truncate">
-                      {voucherFileName ? voucherFileName : 'Seleccionar imagen o PDF'}
-                    </span>
+                <div>
+                  <label className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl border-2 border-dashed transition-all cursor-pointer ${
+                    voucherFileName 
+                      ? 'border-emerald-500 bg-emerald-50/60 shadow-sm' 
+                      : 'border-slate-300 hover:border-clinic-emerald bg-white hover:bg-slate-50'
+                  }`}>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                        voucherFileName ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {voucherFileName ? <CheckCircle className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
+                      </div>
+                      <div className="min-w-0">
+                        <span className={`block text-xs font-bold truncate ${voucherFileName ? 'text-emerald-950' : 'text-slate-700'}`}>
+                          {voucherFileName ? voucherFileName : 'Subir imagen o comprobante PDF'}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block">
+                          {voucherFileName ? '✓ Archivo adjuntado con éxito' : 'Formatos JPG, PNG, PDF'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {voucherFileName ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setVoucherFileName('');
+                        }}
+                        className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg text-xs shrink-0 cursor-pointer"
+                        title="Quitar archivo"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 shrink-0">
+                        Examinar
+                      </span>
+                    )}
+
                     <input
                       type="file"
                       accept="image/*,.pdf"
@@ -2081,16 +2261,6 @@ export default function App() {
                       className="hidden"
                     />
                   </label>
-                  {voucherFileName && (
-                    <button
-                      type="button"
-                      onClick={() => setVoucherFileName('')}
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg text-xs"
-                      title="Quitar archivo"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
                 </div>
               </div>
 
@@ -2213,57 +2383,74 @@ export default function App() {
       )}
 
       {/* ========================================================
-          BARRA DE NAVEGACIÓN INFERIOR (VISTA PACIENTE)
+          BARRA DE NAVEGACIÓN INFERIOR FIJA (VISTA PACIENTE)
          ======================================================== */}
       {systemRole === 'paciente' && userProfile && (
-        <nav className="sticky bottom-0 inset-x-0 h-16 sm:h-18 bg-white/95 backdrop-blur-md border-t border-slate-200 px-6 flex items-center justify-around z-30 shadow-lg max-w-lg mx-auto w-full sm:rounded-t-3xl">
-          
-          {/* Tab 1: Inicio / Atención */}
-          <button
-            type="button"
-            onClick={() => { setActiveTab('inicio'); setEmergencySubMode(null); }}
-            className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition-all cursor-pointer ${
-              activeTab === 'inicio'
-                ? 'text-clinic-dark font-extrabold scale-105'
-                : 'text-slate-400 hover:text-slate-600 font-medium'
-            }`}
-          >
-            <Calendar className={`w-5 h-5 ${activeTab === 'inicio' ? 'text-clinic-emerald' : ''}`} />
-            <span className="text-[11px] leading-none">Inicio / Atención</span>
-          </button>
+        <div className="fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
+          <nav className="pointer-events-auto h-16 sm:h-18 bg-white/95 backdrop-blur-lg border-t border-slate-200/90 px-4 sm:px-8 flex items-center justify-around shadow-2xl shadow-slate-900/15 max-w-lg mx-auto w-full sm:rounded-t-3xl transition-all">
+            
+            {/* Tab 1: Inicio / Atención */}
+            <button
+              type="button"
+              onClick={() => { setActiveTab('inicio'); setEmergencySubMode(null); }}
+              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-2xl transition-all cursor-pointer relative ${
+                activeTab === 'inicio'
+                  ? 'text-clinic-dark font-extrabold scale-105'
+                  : 'text-slate-400 hover:text-slate-600 font-semibold'
+              }`}
+            >
+              <div className={`p-1 rounded-xl transition-colors ${activeTab === 'inicio' ? 'bg-clinic-light text-clinic-emerald' : ''}`}>
+                <Calendar className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] sm:text-[11px] leading-none">Agendar Cita</span>
+              {activeTab === 'inicio' && (
+                <span className="w-1.5 h-1.5 rounded-full bg-clinic-emerald mt-0.5" />
+              )}
+            </button>
 
-          {/* Tab 2: Mis Turnos */}
-          <button
-            type="button"
-            onClick={() => { setActiveTab('turnos'); setEmergencySubMode(null); }}
-            className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition-all relative cursor-pointer ${
-              activeTab === 'turnos'
-                ? 'text-clinic-dark font-extrabold scale-105'
-                : 'text-slate-400 hover:text-slate-600 font-medium'
-            }`}
-          >
-            <CalendarCheck className={`w-5 h-5 ${activeTab === 'turnos' ? 'text-clinic-emerald' : ''}`} />
-            <span className="text-[11px] leading-none">Mis Turnos</span>
-            {appointments.length > 0 && (
-              <span className="absolute top-0 right-3 w-2 h-2 rounded-full bg-clinic-emerald ring-2 ring-white" />
-            )}
-          </button>
+            {/* Tab 2: Mis Turnos */}
+            <button
+              type="button"
+              onClick={() => { setActiveTab('turnos'); setEmergencySubMode(null); }}
+              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-2xl transition-all relative cursor-pointer ${
+                activeTab === 'turnos'
+                  ? 'text-clinic-dark font-extrabold scale-105'
+                  : 'text-slate-400 hover:text-slate-600 font-semibold'
+              }`}
+            >
+              <div className={`p-1 rounded-xl transition-colors relative ${activeTab === 'turnos' ? 'bg-clinic-light text-clinic-emerald' : ''}`}>
+                <CalendarCheck className="w-5 h-5" />
+                {appointments.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-clinic-emerald ring-2 ring-white animate-pulse" />
+                )}
+              </div>
+              <span className="text-[10px] sm:text-[11px] leading-none">Mis Turnos</span>
+              {activeTab === 'turnos' && (
+                <span className="w-1.5 h-1.5 rounded-full bg-clinic-emerald mt-0.5" />
+              )}
+            </button>
 
-          {/* Tab 3: Emergencia */}
-          <button
-            type="button"
-            onClick={() => { setActiveTab('emergencia'); setEmergencySubMode(null); setPreAlertSuccess(false); }}
-            className={`flex flex-col items-center gap-1 py-1 px-4 rounded-xl transition-all cursor-pointer ${
-              activeTab === 'emergencia'
-                ? 'text-clinic-red font-extrabold scale-105'
-                : 'text-slate-400 hover:text-slate-600 font-medium'
-            }`}
-          >
-            <Siren className={`w-5 h-5 ${activeTab === 'emergencia' ? 'text-clinic-red animate-pulse' : ''}`} />
-            <span className="text-[11px] leading-none">Emergencia</span>
-          </button>
+            {/* Tab 3: Emergencia */}
+            <button
+              type="button"
+              onClick={() => { setActiveTab('emergencia'); setEmergencySubMode(null); setPreAlertSuccess(false); }}
+              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${
+                activeTab === 'emergencia'
+                  ? 'text-clinic-red font-extrabold scale-105'
+                  : 'text-slate-400 hover:text-slate-600 font-semibold'
+              }`}
+            >
+              <div className={`p-1 rounded-xl transition-colors ${activeTab === 'emergencia' ? 'bg-red-50 text-clinic-red' : ''}`}>
+                <Siren className={`w-5 h-5 ${activeTab === 'emergencia' ? 'animate-pulse text-clinic-red' : ''}`} />
+              </div>
+              <span className="text-[10px] sm:text-[11px] leading-none">Emergencia SOS</span>
+              {activeTab === 'emergencia' && (
+                <span className="w-1.5 h-1.5 rounded-full bg-clinic-red mt-0.5" />
+              )}
+            </button>
 
-        </nav>
+          </nav>
+        </div>
       )}
 
     </div>
