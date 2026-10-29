@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="50 40 475 460" width="100%" height="100%">
+  <!-- Top-Left L-shape (Dark Green Institutional) -->
+  <path d="M 282 251 L 85 251 L 85 204 L 225 204 L 225 73 L 282 73 Z" fill="#046A28" />
+  
+  <!-- Top-Right L-shape (Emerald Green) -->
+  <path d="M 301 251 L 301 92 L 358 92 L 358 204 L 445 204 L 445 251 Z" fill="#00AC46" />
+  
+  <!-- Bottom-Left L-shape (Emerald Green) -->
+  <path d="M 282 270 L 139 270 L 139 317 L 225 317 L 225 433 L 282 433 Z" fill="#00AC46" />
+  
+  <!-- Bottom-Right L-shape (Dark Green Institutional) -->
+  <path d="M 301 270 L 491 270 L 491 317 L 358 317 L 358 475 L 301 475 Z" fill="#046A28" />
+</svg>
