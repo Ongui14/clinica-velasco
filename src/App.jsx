@@ -45,6 +45,7 @@ import {
   ChevronDown,
   Receipt,
   Upload,
+  Download,
   CheckCircle,
   FileText,
   History,
@@ -2181,7 +2182,7 @@ export default function App() {
             )}
           </div>
 
-          {/* SECCIÓN: CONFIGURACIÓN DE COBRO QR DE LA CLÍNICA (ADMIN) */}
+          {/* SECCIÓN: CONFIGURACIÓN DE COBRO QR DE LA CLÍNICA (SIMPLIFICADA) */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-soft-sm space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-3">
@@ -2193,83 +2194,74 @@ export default function App() {
                     Caja & Finanzas
                   </span>
                   <h3 className="text-lg font-display font-extrabold text-slate-900 mt-0.5">
-                    Configuración de Cobro QR de la Clínica
+                    Código QR Oficial de Cobro
                   </h3>
                 </div>
               </div>
               <span className="text-xs text-slate-500 bg-slate-50 px-3 py-1 rounded-full border border-slate-200">
-                Se refleja en vivo al agendar turnos
+                Se sincroniza en tiempo real con la app de los pacientes
               </span>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="flex flex-col md:flex-row items-center gap-6 p-4 sm:p-6 bg-slate-50 rounded-2xl border border-slate-200/80">
               
-              {/* Preview del QR Configurado */}
-              <div className="lg:col-span-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center space-y-3 flex flex-col items-center">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                  Vista Previa del QR Activo
-                </span>
-                
-                <div className="w-40 h-40 bg-white rounded-2xl p-2.5 border-2 border-emerald-300 shadow-md flex items-center justify-center relative overflow-hidden group">
+              {/* Vista Previa Grande del QR Activo */}
+              <div className="relative group shrink-0">
+                <div className="w-52 h-52 sm:w-60 sm:h-60 bg-white rounded-2xl p-3 border-2 border-emerald-300 shadow-md flex items-center justify-center overflow-hidden">
                   {qrConfig.qrImage ? (
                     <img 
                       src={qrConfig.qrImage} 
-                      alt="QR Bancario" 
+                      alt="QR Bancario Oficial" 
                       className="w-full h-full object-contain rounded-xl"
                     />
                   ) : (
-                    <div className="w-full h-full border-2 border-slate-800 rounded-xl p-2 flex flex-col items-center justify-between bg-white">
+                    <div className="w-full h-full border-2 border-slate-800 rounded-xl p-3 flex flex-col items-center justify-between bg-white">
                       <div className="w-full flex justify-between items-center">
-                        <div className="w-6 h-6 bg-slate-900 rounded-sm"></div>
-                        <div className="w-6 h-6 bg-slate-900 rounded-sm"></div>
+                        <div className="w-8 h-8 bg-slate-900 rounded-sm"></div>
+                        <div className="w-8 h-8 bg-slate-900 rounded-sm"></div>
                       </div>
-                      <div className="w-12 h-2 bg-clinic-emerald rounded-full my-auto"></div>
+                      <div className="text-center space-y-1">
+                        <div className="w-16 h-2 bg-clinic-emerald rounded-full mx-auto"></div>
+                        <span className="text-[10px] font-extrabold text-slate-400 block uppercase tracking-wider">
+                          QR Predeterminado
+                        </span>
+                      </div>
                       <div className="w-full flex justify-between items-center">
-                        <div className="w-6 h-6 bg-slate-900 rounded-sm"></div>
-                        <div className="w-3 h-3 bg-clinic-dark rounded-sm"></div>
+                        <div className="w-8 h-8 bg-slate-900 rounded-sm"></div>
+                        <div className="w-4 h-4 bg-clinic-dark rounded-sm"></div>
                       </div>
                     </div>
                   )}
-
-                  {qrConfig.qrImage && (
-                    <button
-                      type="button"
-                      onClick={() => setQrConfig(prev => ({ ...prev, qrImage: null }))}
-                      className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer"
-                      title="Eliminar imagen y volver al QR por defecto"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
                 </div>
 
-                <div className="text-xs">
-                  <strong className="block text-slate-900">{qrConfig.bankName}</strong>
-                  <span className="text-slate-500">{qrConfig.accountHolder}</span>
-                  <span className="block font-black text-clinic-emerald text-sm mt-1">Bs. {qrConfig.amount}</span>
-                </div>
+                {qrConfig.qrImage && (
+                  <button
+                    type="button"
+                    onClick={() => setQrConfig(prev => ({ ...prev, qrImage: null }))}
+                    className="absolute top-2 right-2 p-2 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-md opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer"
+                    title="Restablecer al QR por defecto"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
 
-              {/* Formulario de Configuración del Administrador */}
-              <div className="lg:col-span-8 space-y-4 text-xs">
-                
-                {/* Subir nueva imagen del QR */}
-                <div className="space-y-1">
-                  <label className="block font-bold text-slate-700">
-                    Subir nueva imagen del QR oficial (BNB, BCP, Ganadero, etc.):
-                  </label>
-                  <label className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl cursor-pointer transition-colors">
-                    <div className="w-8 h-8 rounded-lg bg-clinic-emerald text-white flex items-center justify-center shrink-0">
-                      <Upload className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="block font-bold text-slate-800 text-xs">
-                        {qrConfig.qrImage ? '✓ Imagen de QR cargada (Haz clic para cambiar)' : 'Seleccionar imagen del QR desde el dispositivo'}
-                      </span>
-                      <span className="block text-[11px] text-slate-400">
-                        Formatos soportados: JPG, PNG, WebP
-                      </span>
-                    </div>
+              {/* Controles de Carga Limpios y Explicación */}
+              <div className="space-y-4 flex-1 text-center md:text-left">
+                <div>
+                  <h4 className="text-base font-extrabold text-slate-900">
+                    {qrConfig.qrImage ? '✓ Imagen de QR Oficial Habilitada' : 'Código QR Simple de la Clínica'}
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    Al escanear este código desde cualquier banco (BNB, Unión, BCP, Ganadero, etc.), la aplicación bancaria reconoce automáticamente el titular y número de cuenta. Sube una foto o captura de tu QR bancario oficial para que los pacientes paguen su consulta directamente.
+                  </p>
+                </div>
+
+                {/* Botón Destacado de Subida de Archivo */}
+                <div>
+                  <label className="inline-flex items-center gap-3 px-5 py-3.5 bg-clinic-emerald hover:bg-clinic-emeraldHover text-white text-xs font-black rounded-2xl shadow-md hover:shadow-lg transition-all cursor-pointer group active:scale-95">
+                    <Upload className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    <span>{qrConfig.qrImage ? 'Cambiar Imagen del QR Oficial' : 'Subir / Actualizar Imagen del QR Oficial'}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -2286,60 +2278,10 @@ export default function App() {
                       className="hidden"
                     />
                   </label>
+                  <span className="block text-[11px] text-slate-400 mt-2 font-medium">
+                    Soporta imágenes JPG, PNG o WebP descargadas desde tu banca móvil.
+                  </span>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div className="space-y-1">
-                    <label className="block font-bold text-slate-700">Entidad Bancaria:</label>
-                    <input
-                      type="text"
-                      value={qrConfig.bankName}
-                      onChange={(e) => setQrConfig(prev => ({ ...prev, bankName: e.target.value }))}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinic-emerald"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block font-bold text-slate-700">Titular de Cuenta:</label>
-                    <input
-                      type="text"
-                      value={qrConfig.accountHolder}
-                      onChange={(e) => setQrConfig(prev => ({ ...prev, accountHolder: e.target.value }))}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinic-emerald"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block font-bold text-slate-700">Monto Base de Consulta (Bs.):</label>
-                    <input
-                      type="number"
-                      value={qrConfig.amount}
-                      onChange={(e) => setQrConfig(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinic-emerald"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block font-bold text-slate-700">NIT / Facturación:</label>
-                    <input
-                      type="text"
-                      value={qrConfig.nit}
-                      onChange={(e) => setQrConfig(prev => ({ ...prev, nit: e.target.value }))}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinic-emerald"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block font-bold text-slate-700">Nota informativa para el Paciente:</label>
-                  <input
-                    type="text"
-                    value={qrConfig.note}
-                    onChange={(e) => setQrConfig(prev => ({ ...prev, note: e.target.value }))}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinic-emerald"
-                  />
-                </div>
-
               </div>
 
             </div>
@@ -2878,43 +2820,59 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Tarjeta Visual de QR Oficial Dinámico */}
-              <div className="bg-white p-3.5 rounded-2xl border border-emerald-200/90 flex flex-col sm:flex-row items-center gap-3.5 shadow-soft-sm">
-                <div className="w-24 h-24 sm:w-20 sm:h-20 bg-slate-900 rounded-2xl flex items-center justify-center text-white shrink-0 p-1.5 relative overflow-hidden shadow-inner group">
+              {/* Tarjeta Visual de QR Oficial Limpia para el Paciente */}
+              <div className="bg-white p-4 rounded-2xl border border-emerald-200/90 flex flex-col items-center text-center gap-3 shadow-soft-sm">
+                
+                {/* Imagen Grande de QR */}
+                <div className="w-48 h-48 sm:w-52 sm:h-52 bg-white rounded-2xl p-2.5 border-2 border-emerald-300 shadow-md flex items-center justify-center overflow-hidden">
                   {qrConfig.qrImage ? (
                     <img 
                       src={qrConfig.qrImage} 
-                      alt="QR Oficial" 
-                      className="w-full h-full object-contain rounded-xl bg-white" 
+                      alt="Código QR de Pago" 
+                      className="w-full h-full object-contain rounded-xl" 
                     />
                   ) : (
-                    <div className="w-full h-full border-2 border-white/90 rounded-xl flex flex-col items-center justify-between p-1 bg-white">
+                    <div className="w-full h-full border-2 border-slate-800 rounded-xl flex flex-col items-center justify-between p-3 bg-white">
                       <div className="w-full flex justify-between items-center">
-                        <div className="w-3 h-3 bg-slate-900 rounded-sm"></div>
-                        <div className="w-3 h-3 bg-slate-900 rounded-sm"></div>
+                        <div className="w-6 h-6 bg-slate-900 rounded-sm"></div>
+                        <div className="w-6 h-6 bg-slate-900 rounded-sm"></div>
                       </div>
-                      <div className="w-6 h-1.5 bg-clinic-emerald rounded-full my-auto"></div>
+                      <div className="text-center space-y-1">
+                        <div className="w-12 h-2 bg-clinic-emerald rounded-full mx-auto"></div>
+                        <span className="text-[10px] font-extrabold text-slate-400 block uppercase">QR Oficial Simple</span>
+                      </div>
                       <div className="w-full flex justify-between items-center">
-                        <div className="w-3 h-3 bg-slate-900 rounded-sm"></div>
-                        <div className="w-2 h-2 bg-clinic-dark rounded-sm"></div>
+                        <div className="w-6 h-6 bg-slate-900 rounded-sm"></div>
+                        <div className="w-3 h-3 bg-clinic-dark rounded-sm"></div>
                       </div>
                     </div>
                   )}
-                  <span className="absolute bottom-0 inset-x-0 bg-clinic-dark text-[7px] sm:text-[8px] font-black text-center text-white py-0.5 tracking-wider">
-                    QR HABILITADO
-                  </span>
                 </div>
-                <div className="text-[11px] leading-snug w-full space-y-1">
-                  <div className="flex items-center justify-between">
-                    <strong className="text-slate-900 font-extrabold text-xs">{qrConfig.bankName}</strong>
-                    <span className="text-[10px] font-bold text-clinic-emerald bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
-                      Bs. {qrConfig.amount}
+
+                {/* Monto de Consulta en Bs e Instrucción de Escaneo */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Monto a pagar:</span>
+                    <span className="text-lg font-black text-clinic-dark bg-emerald-50 px-3 py-0.5 rounded-xl border border-emerald-200">
+                      Bs. {selectedSpecialtyForBooking.price || 150}
                     </span>
                   </div>
-                  <span className="text-slate-600 block">Titular: <strong>{qrConfig.accountHolder}</strong></span>
-                  <span className="text-slate-500 block text-[10px]">{qrConfig.accountNumber} • NIT: {qrConfig.nit}</span>
-                  <span className="text-[10px] text-clinic-dark font-semibold block pt-0.5">ℹ️ {qrConfig.note}</span>
+                  <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                    Escanea este código desde la app de cualquier banco boliviano para transferir exactamente el monto de tu consulta.
+                  </p>
                 </div>
+
+                {/* Botón para Descargar Imagen QR si el paciente está en su teléfono */}
+                {qrConfig.qrImage && (
+                  <a
+                    href={qrConfig.qrImage}
+                    download="QR-Clinica-Velasco.png"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold transition-colors cursor-pointer border border-slate-200"
+                  >
+                    <Download className="w-3.5 h-3.5 text-clinic-emerald" />
+                    <span>Descargar Imagen del QR</span>
+                  </a>
+                )}
               </div>
 
               {/* Input de número de voucher o transacción */}
