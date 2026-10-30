@@ -484,6 +484,7 @@ export default function App() {
   // Estados del Módulo Financiero y Cierre de Caja (Admin / Caja)
   const [financialPeriod, setFinancialPeriod] = useState('hoy'); // 'hoy' | 'semana' | 'mes'
   const [showPrintReportModal, setShowPrintReportModal] = useState(false);
+  const [selectedTicketForPrint, setSelectedTicketForPrint] = useState(null);
 
   // Admin Panel Editing State
   const [editingSpecialtyId, setEditingSpecialtyId] = useState(null);
@@ -524,6 +525,110 @@ export default function App() {
     setVoucherNumber('');
     setVoucherFileName('');
     setVoucherError('');
+  };
+
+  // Función para descargar imagen de QR al dispositivo del paciente
+  const handleDownloadQrCode = () => {
+    const filename = 'QR-Clinica-Velasco.png';
+    if (qrConfig && qrConfig.qrImage) {
+      const link = document.createElement('a');
+      link.href = qrConfig.qrImage;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
+    // Generar PNG al vuelo con Canvas de 512x512
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Fondo blanco
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Borde exterior verde clínico
+    ctx.strokeStyle = '#046A28';
+    ctx.lineWidth = 12;
+    ctx.strokeRect(16, 16, 480, 480);
+
+    // Encabezado
+    ctx.fillStyle = '#046A28';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('CLÍNICA VELASCO • PAGO QR', 256, 52);
+
+    // Dibujar elementos del patrón QR
+    ctx.fillStyle = '#0F172A';
+
+    // Función auxiliar para dibujar marcadores de posición QR (ojos)
+    const drawQREye = (x, y, size) => {
+      ctx.fillStyle = '#0F172A';
+      ctx.fillRect(x, y, size, size);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(x + size * 0.14, y + size * 0.14, size * 0.72, size * 0.72);
+      ctx.fillStyle = '#046A28';
+      ctx.fillRect(x + size * 0.28, y + size * 0.28, size * 0.44, size * 0.44);
+    };
+
+    drawQREye(60, 80, 100);
+    drawQREye(352, 80, 100);
+    drawQREye(60, 312, 100);
+
+    // Matriz de módulos centrales decorativos
+    ctx.fillStyle = '#0F172A';
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        if ((r + c * 3) % 2 === 0 || (r * c) % 3 === 0) {
+          ctx.fillRect(190 + c * 15, 120 + r * 15, 11, 11);
+        }
+      }
+    }
+
+    // Bloques laterales e inferiores
+    for (let i = 0; i < 7; i++) {
+      ctx.fillRect(190 + i * 18, 280, 12, 12);
+      ctx.fillRect(190 + i * 18, 310, 12, 12);
+      ctx.fillRect(350 + (i % 4) * 20, 220 + Math.floor(i / 4) * 20, 12, 12);
+      ctx.fillRect(350 + (i % 4) * 20, 310 + Math.floor(i / 4) * 20, 12, 12);
+    }
+
+    // Isotipo central "CV"
+    ctx.fillStyle = '#046A28';
+    ctx.beginPath();
+    ctx.arc(256, 256, 34, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText('CV', 256, 264);
+
+    // Pie de imagen
+    const specialtyName = selectedSpecialtyForBooking ? selectedSpecialtyForBooking.name : 'Consulta Médica';
+    const amountVal = selectedSpecialtyForBooking ? (selectedSpecialtyForBooking.price || 150) : 150;
+    ctx.fillStyle = '#046A28';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillText(`Monto: Bs. ${amountVal} • ${specialtyName}`, 256, 440);
+
+    ctx.fillStyle = '#64748B';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('Trinidad, Beni • Escanea con tu app bancaria', 256, 468);
+
+    // Trigger de descarga
+    const dataUrl = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Confirm Appointment Booking (Patient)
@@ -1750,23 +1855,16 @@ export default function App() {
 
                       </div>
 
-                      {/* Ticket Footer Acciones */}
-                      <div className="p-4 bg-slate-50 border-t border-slate-100 flex flex-col xs:flex-row sm:flex-row items-center justify-between gap-2">
+                      {/* Ticket Footer Acciones: Solo botón Guardar / Imprimir */}
+                      <div className="p-4 bg-slate-50 border-t border-slate-100">
                         <button
-                          onClick={() => handleSendVoucherToAdmin(ticket)}
-                          className="w-full sm:flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-clinic-emerald text-white hover:bg-clinic-emeraldHover font-bold text-xs transition-colors cursor-pointer shadow-sm"
-                          title="Enviar comprobante al administrador por WhatsApp"
+                          type="button"
+                          onClick={() => setSelectedTicketForPrint(ticket)}
+                          className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-clinic-dark hover:bg-clinic-dark/90 text-white font-extrabold text-xs transition-all cursor-pointer shadow-md active:scale-[0.99] group"
+                          title="Guardar o imprimir Pase Médico Digital"
                         >
-                          <Send className="w-3.5 h-3.5" />
-                          <span>Enviar Voucher al Admin</span>
-                        </button>
-                        <button
-                          onClick={() => handleShareWhatsAppTicket(ticket)}
-                          className="w-full sm:w-auto flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-xs transition-colors cursor-pointer shadow-soft-sm"
-                          title="Compartir o guardar comprobante"
-                        >
-                          <Share2 className="w-3.5 h-3.5" />
-                          <span>Ficha WhatsApp</span>
+                          <Printer className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                          <span>🖨️ Guardar / Imprimir Pase Médico</span>
                         </button>
                       </div>
                     </div>
@@ -2853,7 +2951,7 @@ export default function App() {
                 <div className="space-y-1">
                   <div className="flex items-center justify-center gap-2">
                     <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Monto a pagar:</span>
-                    <span className="text-lg font-black text-clinic-dark bg-emerald-50 px-3 py-0.5 rounded-xl border border-emerald-200">
+                    <span className="text-lg font-black text-clinic-dark bg-emerald-50 px-3.5 py-1 rounded-xl border border-emerald-200 shadow-sm">
                       Bs. {selectedSpecialtyForBooking.price || 150}
                     </span>
                   </div>
@@ -2862,17 +2960,15 @@ export default function App() {
                   </p>
                 </div>
 
-                {/* Botón para Descargar Imagen QR si el paciente está en su teléfono */}
-                {qrConfig.qrImage && (
-                  <a
-                    href={qrConfig.qrImage}
-                    download="QR-Clinica-Velasco.png"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold transition-colors cursor-pointer border border-slate-200"
-                  >
-                    <Download className="w-3.5 h-3.5 text-clinic-emerald" />
-                    <span>Descargar Imagen del QR</span>
-                  </a>
-                )}
+                {/* Botón destacado: Descargar QR en mi celular / PC */}
+                <button
+                  type="button"
+                  onClick={handleDownloadQrCode}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-clinic-emerald hover:bg-clinic-emeraldHover text-white text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95 group"
+                >
+                  <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                  <span>⬇ Descargar QR en mi celular / PC</span>
+                </button>
               </div>
 
               {/* Input de número de voucher o transacción */}
@@ -3318,6 +3414,118 @@ export default function App() {
         </div>
       )}
 
+
+
+      {/* ========================================================
+          MODAL DE IMPRESIÓN / GUARDADO DE PASE MÉDICO DIGITAL (PACIENTE)
+         ======================================================== */}
+      {selectedTicketForPrint && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in overflow-y-auto">
+          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 my-auto overflow-hidden flex flex-col max-h-[92vh]">
+            
+            {/* Header del modal de impresión */}
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0 print:hidden">
+              <div className="flex items-center gap-2">
+                <Printer className="w-5 h-5 text-emerald-400" />
+                <span className="text-sm font-extrabold">Pase Médico Digital • Ficha {selectedTicketForPrint.id}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-3.5 py-1.5 bg-clinic-emerald hover:bg-clinic-emeraldHover text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Imprimir / PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTicketForPrint(null)}
+                  className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Documento Pase Médico para Impresión */}
+            <div className="p-6 sm:p-8 space-y-5 overflow-y-auto print:overflow-visible print:p-0 text-slate-900 font-sans">
+              
+              <div className="border-b-2 border-slate-800 pb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight">CLÍNICA VELASCO</h2>
+                  <p className="text-xs font-bold text-emerald-700 uppercase tracking-widest">Trinidad, Beni - Bolivia</p>
+                  <p className="text-[11px] text-slate-500">Av. Busch esq. Nicolás Suárez • Tel: 69400096</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-black bg-clinic-dark text-white px-3 py-1 rounded-lg block">
+                    Ficha {selectedTicketForPrint.id}
+                  </span>
+                  <span className="text-[11px] font-bold text-slate-600 block mt-1">
+                    {selectedTicketForPrint.date} • {selectedTicketForPrint.hour}
+                  </span>
+                </div>
+              </div>
+
+              {/* Datos del Paciente y Consulta */}
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-semibold">Paciente:</span>
+                  <strong className="text-slate-900 font-extrabold">{selectedTicketForPrint.patientName}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-semibold">Teléfono de contacto:</span>
+                  <span className="font-bold text-slate-800">{selectedTicketForPrint.patientPhone}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-semibold">Especialidad:</span>
+                  <strong className="text-clinic-dark font-extrabold">{selectedTicketForPrint.specialty}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-semibold">Médico Asignado:</span>
+                  <span className="font-bold text-slate-900">{selectedTicketForPrint.doctor}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-semibold">Ubicación / Consultorio:</span>
+                  <span className="font-bold text-slate-900">{selectedTicketForPrint.room}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-semibold">Tarifa de Consulta:</span>
+                  <span className="font-black text-clinic-dark">Bs. {selectedTicketForPrint.price || 150}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-semibold">Nº Comprobante / Voucher:</span>
+                  <span className="font-mono font-bold text-slate-800">{selectedTicketForPrint.voucherRef || 'Registrado'}</span>
+                </div>
+                <div className="flex justify-between items-center pt-1 border-t border-slate-200">
+                  <span className="text-slate-500 font-semibold">Estado de Pago:</span>
+                  <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                    selectedTicketForPrint.paymentStatus === 'Verificado y Aprobado'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-amber-100 text-amber-900'
+                  }`}>
+                    {selectedTicketForPrint.paymentStatus || 'Pendiente de Validación'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Guía para el paciente */}
+              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-slate-700 space-y-1">
+                <span className="font-extrabold text-clinic-dark block">🧭 Cómo llegar a su consultorio:</span>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  {selectedTicketForPrint.locationGuide || 'Presentarse en recepción central de Planta Baja.'}
+                </p>
+              </div>
+
+              <div className="text-[11px] text-slate-400 text-center pt-2">
+                Presente este pase en recepción o triaje 15 minutos antes de su consulta médica.
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* ========================================================
           MODAL / VISTA DE IMPRESIÓN GERENCIAL: CIERRE DE CAJA
