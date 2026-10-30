@@ -2800,281 +2800,297 @@ export default function App() {
           MODAL LIMPIO: SELECCIÓN DE HORA Y CONFIRMACIÓN DE CITA
          ======================================================== */}
       {selectedSpecialtyForBooking && userProfile && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-5 animate-slide-up">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
+          <div className="w-full max-w-md md:max-w-3xl max-h-[90vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden my-auto animate-slide-up">
             
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <span className="text-[11px] font-bold text-clinic-emerald uppercase tracking-wider block">
-                  Agendamiento
-                </span>
-                <h3 className="text-lg font-display font-extrabold text-slate-900">
-                  {selectedSpecialtyForBooking.name}
-                </h3>
+            {/* CABECERA FIJA */}
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-clinic-light text-clinic-dark flex items-center justify-center font-black text-xs">
+                  CV
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-clinic-emerald bg-emerald-50 px-2 py-0.5 rounded-full inline-block">
+                    Agendamiento de Cita
+                  </span>
+                  <h3 className="text-base sm:text-lg font-display font-extrabold text-slate-900 leading-tight">
+                    {selectedSpecialtyForBooking.name}
+                  </h3>
+                </div>
               </div>
+
               <button
+                type="button"
                 onClick={() => setSelectedSpecialtyForBooking(null)}
                 className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                title="Cerrar ventana"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Indicador de paciente registrado (sin volver a pedir datos) */}
-            <div className="text-xs text-slate-600 font-semibold bg-emerald-50/70 p-3 rounded-2xl border border-emerald-100 flex items-center justify-between">
-              <span className="text-slate-500">Agendando para:</span>
-              <span className="font-extrabold text-clinic-dark">
-                {userProfile.name} <span className="text-slate-500 font-normal">({userProfile.phone})</span>
-              </span>
-            </div>
-
-            {/* Doctor info compact */}
-            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-clinic-dark text-white flex items-center justify-center font-bold text-sm shrink-0">
-                CV
-              </div>
-              <div>
-                <h4 className="font-extrabold text-slate-900 text-sm">
-                  {selectedSpecialtyForBooking.doctor}
-                </h4>
-                <p className="text-xs text-slate-500">
-                  {selectedSpecialtyForBooking.room}
-                </p>
-                <p className="text-[11px] text-clinic-emerald font-semibold">
-                  🧭 {selectedSpecialtyForBooking.locationGuide}
-                </p>
-              </div>
-            </div>
-
-            {/* Quick date selector */}
-            <div className="space-y-1.5">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                Fecha de Consulta:
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                {['Hoy', 'Mañana', 'Próx. Día'].map((d) => (
-                  <button
-                    type="button"
-                    key={d}
-                    onClick={() => setSelectedDateLabel(d)}
-                    className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      selectedDateLabel === d
-                        ? 'bg-clinic-dark text-white shadow-sm'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {d}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Selectable Hour Pills */}
-            <div className="space-y-1.5">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                Selecciona la Hora:
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                {selectedSpecialtyForBooking.hours.map((hr) => (
-                  <button
-                    type="button"
-                    key={hr}
-                    onClick={() => setSelectedHour(hr)}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      selectedHour === hr
-                        ? 'bg-clinic-emerald text-white shadow-emerald-glow'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>{hr}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* SECCIÓN OBLIGATORIA: COMPROBANTE DE PAGO / TRANSFERENCIA / QR */}
-            <div className="p-4 bg-gradient-to-b from-emerald-50/50 to-slate-50 rounded-2xl border-2 border-emerald-300/80 shadow-inner space-y-3.5">
+            {/* CUERPO CON SCROLL INTERNO Y 2 COLUMNAS EN ESCRITORIO (md:grid-cols-2) */}
+            <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4">
               
-              {/* Header de Pago y Monto de Consulta */}
-              <div className="flex items-center justify-between pb-2.5 border-b border-emerald-200/60">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-clinic-emerald text-white flex items-center justify-center">
-                    <Receipt className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-black text-slate-900 uppercase tracking-wider block">
-                      Pago de Consulta
-                    </span>
-                    <span className="text-[10px] text-slate-500 font-medium">Transferencia Bancaria o QR Simple</span>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Monto</span>
-                  <span className="text-sm font-black text-clinic-dark bg-white px-2.5 py-0.5 rounded-lg border border-emerald-200 inline-block shadow-sm">
-                    Bs. {selectedSpecialtyForBooking.price || qrConfig.amount || 150}
-                  </span>
-                </div>
+              {/* Indicador de paciente registrado */}
+              <div className="text-xs text-slate-600 font-semibold bg-emerald-50/70 p-3 rounded-2xl border border-emerald-100 flex items-center justify-between">
+                <span className="text-slate-500">Agendando para:</span>
+                <span className="font-extrabold text-clinic-dark">
+                  {userProfile.name} <span className="text-slate-500 font-normal">({userProfile.phone})</span>
+                </span>
               </div>
 
-              {/* Tarjeta Visual de QR Oficial Limpia para el Paciente */}
-              <div className="bg-white p-4 rounded-2xl border border-emerald-200/90 flex flex-col items-center text-center gap-3 shadow-soft-sm">
+              {/* Grid 2 Columnas para laptop/PC y 1 columna en móvil */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 items-start">
                 
-                {/* Imagen Grande de QR */}
-                <div className="w-48 h-48 sm:w-52 sm:h-52 bg-white rounded-2xl p-2.5 border-2 border-emerald-300 shadow-md flex items-center justify-center overflow-hidden">
-                  {qrConfig.qrImage ? (
-                    <img 
-                      src={qrConfig.qrImage} 
-                      alt="Código QR de Pago" 
-                      className="w-full h-full object-contain rounded-xl" 
-                    />
-                  ) : (
-                    <div className="w-full h-full border-2 border-slate-800 rounded-xl flex flex-col items-center justify-between p-3 bg-white">
-                      <div className="w-full flex justify-between items-center">
-                        <div className="w-6 h-6 bg-slate-900 rounded-sm"></div>
-                        <div className="w-6 h-6 bg-slate-900 rounded-sm"></div>
-                      </div>
-                      <div className="text-center space-y-1">
-                        <div className="w-12 h-2 bg-clinic-emerald rounded-full mx-auto"></div>
-                        <span className="text-[10px] font-extrabold text-slate-400 block uppercase">QR Oficial Simple</span>
-                      </div>
-                      <div className="w-full flex justify-between items-center">
-                        <div className="w-6 h-6 bg-slate-900 rounded-sm"></div>
-                        <div className="w-3 h-3 bg-clinic-dark rounded-sm"></div>
-                      </div>
+                {/* COLUMNA IZQUIERDA: Médico, consultorio, fecha y hora */}
+                <div className="space-y-4">
+                  
+                  {/* Doctor info compact */}
+                  <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-clinic-dark text-white flex items-center justify-center font-bold text-sm shrink-0">
+                      CV
                     </div>
-                  )}
-                </div>
-
-                {/* Monto de Consulta en Bs e Instrucción de Escaneo */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Monto a pagar:</span>
-                    <span className="text-lg font-black text-clinic-dark bg-emerald-50 px-3.5 py-1 rounded-xl border border-emerald-200 shadow-sm">
-                      Bs. {selectedSpecialtyForBooking.price || 150}
-                    </span>
+                    <div className="min-w-0">
+                      <h4 className="font-extrabold text-slate-900 text-sm truncate">
+                        {selectedSpecialtyForBooking.doctor}
+                      </h4>
+                      <p className="text-xs text-slate-500 font-semibold">
+                        {selectedSpecialtyForBooking.room}
+                      </p>
+                      <p className="text-[11px] text-clinic-emerald font-bold truncate mt-0.5">
+                        🧭 {selectedSpecialtyForBooking.locationGuide}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
-                    Escanea este código desde la app de cualquier banco boliviano para transferir exactamente el monto de tu consulta.
-                  </p>
-                </div>
 
-                {/* Botón destacado: Descargar QR en mi celular / PC */}
-                <button
-                  type="button"
-                  onClick={handleDownloadQrCode}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-clinic-emerald hover:bg-clinic-emeraldHover text-white text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95 group"
-                >
-                  <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
-                  <span>⬇ Descargar QR en mi celular / PC</span>
-                </button>
-              </div>
-
-              {/* Input de número de voucher o transacción */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="block text-[11px] font-bold text-slate-700">
-                    Nº de Operación / Código de Transferencia:
-                  </label>
-                  {voucherNumber.trim() && (
-                    <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
-                      <CheckCircle2 className="w-3 h-3" /> Registrado
+                  {/* Quick date selector */}
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                      Fecha de Consulta:
                     </span>
-                  )}
-                </div>
-                <input
-                  type="text"
-                  value={voucherNumber}
-                  onChange={(e) => {
-                    setVoucherNumber(e.target.value);
-                    if (voucherError) setVoucherError('');
-                  }}
-                  placeholder="Ej. OP-984321 / Ref. 44521"
-                  className={`w-full px-3 py-2 bg-white rounded-xl border text-xs font-semibold focus:outline-none transition-all ${
-                    voucherNumber.trim() 
-                      ? 'border-clinic-emerald ring-2 ring-clinic-emerald/20 bg-emerald-50/20' 
-                      : 'border-slate-200 focus:ring-2 focus:ring-clinic-emerald'
-                  }`}
-                />
-              </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['Hoy', 'Mañana', 'Próx. Día'].map((d) => (
+                        <button
+                          type="button"
+                          key={d}
+                          onClick={() => setSelectedDateLabel(d)}
+                          className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            selectedDateLabel === d
+                              ? 'bg-clinic-dark text-white shadow-sm'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              {/* Zona de carga moderna (Dropzone-like) */}
-              <div className="space-y-1">
-                <label className="block text-[11px] font-bold text-slate-700">
-                  O adjuntar captura de la transferencia:
-                </label>
-                <div>
-                  <label className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl border-2 border-dashed transition-all cursor-pointer ${
-                    voucherFileName 
-                      ? 'border-emerald-500 bg-emerald-50/60 shadow-sm' 
-                      : 'border-slate-300 hover:border-clinic-emerald bg-white hover:bg-slate-50'
-                  }`}>
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                        voucherFileName ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {voucherFileName ? <CheckCircle className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
+                  {/* Selectable Hour Pills */}
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                      Selecciona la Hora:
+                    </span>
+                    <div className="grid grid-cols-2 gap-2">
+                      {selectedSpecialtyForBooking.hours.map((hr) => (
+                        <button
+                          type="button"
+                          key={hr}
+                          onClick={() => setSelectedHour(hr)}
+                          className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            selectedHour === hr
+                              ? 'bg-clinic-emerald text-white shadow-emerald-glow'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>{hr}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 text-[11px] text-slate-500 leading-relaxed">
+                    ℹ️ <strong className="text-slate-700">Importante:</strong> Al confirmar tu consulta, el consultorio queda reservado a tu nombre. Por favor adjunta el comprobante a continuación para completar la validación.
+                  </div>
+
+                </div>
+
+                {/* COLUMNA DERECHA: Pago de consulta, QR compactado, descarga y comprobante */}
+                <div className="p-4 bg-gradient-to-b from-emerald-50/50 to-slate-50 rounded-2xl border-2 border-emerald-300/80 shadow-inner space-y-3.5">
+                  
+                  {/* Header de Pago y Monto de Consulta */}
+                  <div className="flex items-center justify-between pb-2.5 border-b border-emerald-200/60">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-clinic-emerald text-white flex items-center justify-center">
+                        <Receipt className="w-4 h-4" />
                       </div>
-                      <div className="min-w-0">
-                        <span className={`block text-xs font-bold truncate ${voucherFileName ? 'text-emerald-950' : 'text-slate-700'}`}>
-                          {voucherFileName ? voucherFileName : 'Subir imagen o comprobante PDF'}
+                      <div>
+                        <span className="text-xs font-black text-slate-900 uppercase tracking-wider block">
+                          Pago de Consulta
                         </span>
-                        <span className="text-[10px] text-slate-400 block">
-                          {voucherFileName ? '✓ Archivo adjuntado con éxito' : 'Formatos JPG, PNG, PDF'}
-                        </span>
+                        <span className="text-[10px] text-slate-500 font-medium">Transferencia Bancaria o QR Simple</span>
                       </div>
                     </div>
 
-                    {voucherFileName ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setVoucherFileName('');
-                        }}
-                        className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg text-xs shrink-0 cursor-pointer"
-                        title="Quitar archivo"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 shrink-0">
-                        Examinar
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Monto</span>
+                      <span className="text-sm font-black text-clinic-dark bg-white px-2.5 py-0.5 rounded-lg border border-emerald-200 inline-block shadow-sm">
+                        Bs. {selectedSpecialtyForBooking.price || 150}
                       </span>
-                    )}
+                    </div>
+                  </div>
 
+                  {/* Tarjeta Visual de QR Oficial Compactada y Optimizada */}
+                  <div className="bg-white p-3 rounded-2xl border border-emerald-200/90 flex flex-col items-center text-center gap-2.5 shadow-soft-sm">
+                    
+                    {/* Imagen de QR con dimensiones compactas para laptop */}
+                    <div className="w-36 h-36 sm:w-40 sm:h-40 bg-white rounded-2xl p-2 border-2 border-emerald-300 shadow-sm flex items-center justify-center overflow-hidden">
+                      {qrConfig.qrImage ? (
+                        <img 
+                          src={qrConfig.qrImage} 
+                          alt="Código QR de Pago" 
+                          className="w-full h-full object-contain rounded-xl" 
+                        />
+                      ) : (
+                        <div className="w-full h-full border-2 border-slate-800 rounded-xl flex flex-col items-center justify-between p-2 bg-white">
+                          <div className="w-full flex justify-between items-center">
+                            <div className="w-5 h-5 bg-slate-900 rounded-sm"></div>
+                            <div className="w-5 h-5 bg-slate-900 rounded-sm"></div>
+                          </div>
+                          <div className="text-center space-y-0.5">
+                            <div className="w-10 h-1.5 bg-clinic-emerald rounded-full mx-auto"></div>
+                            <span className="text-[9px] font-extrabold text-slate-400 block uppercase">QR Simple</span>
+                          </div>
+                          <div className="w-full flex justify-between items-center">
+                            <div className="w-5 h-5 bg-slate-900 rounded-sm"></div>
+                            <div className="w-2.5 h-2.5 bg-clinic-dark rounded-sm"></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Botón destacado: Descargar QR en mi celular / PC */}
+                    <button
+                      type="button"
+                      onClick={handleDownloadQrCode}
+                      className="w-full inline-flex items-center justify-center gap-2 py-2 px-3 bg-clinic-emerald hover:bg-clinic-emeraldHover text-white text-[11px] font-black rounded-xl shadow-sm transition-all cursor-pointer active:scale-95 group"
+                    >
+                      <Download className="w-3.5 h-3.5 group-hover:translate-y-0.5 transition-transform" />
+                      <span>⬇ Descargar QR en mi celular / PC</span>
+                    </button>
+                  </div>
+
+                  {/* Input de número de voucher o transacción */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] font-bold text-slate-700">
+                        Nº de Operación / Código de Transferencia:
+                      </label>
+                      {voucherNumber.trim() && (
+                        <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
+                          <CheckCircle2 className="w-3 h-3" /> Registrado
+                        </span>
+                      )}
+                    </div>
                     <input
-                      type="file"
-                      accept="image/*,.pdf"
+                      type="text"
+                      value={voucherNumber}
                       onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setVoucherFileName(file.name);
-                          if (voucherError) setVoucherError('');
-                        }
+                        setVoucherNumber(e.target.value);
+                        if (voucherError) setVoucherError('');
                       }}
-                      className="hidden"
+                      placeholder="Ej. OP-984321 / Ref. 44521"
+                      className={`w-full px-3 py-2 bg-white rounded-xl border text-xs font-semibold focus:outline-none transition-all ${
+                        voucherNumber.trim() 
+                          ? 'border-clinic-emerald ring-2 ring-clinic-emerald/20 bg-emerald-50/20' 
+                          : 'border-slate-200 focus:ring-2 focus:ring-clinic-emerald'
+                      }`}
                     />
-                  </label>
+                  </div>
+
+                  {/* Zona de carga moderna (Dropzone-like) */}
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-slate-700">
+                      O adjuntar captura de la transferencia:
+                    </label>
+                    <div>
+                      <label className={`w-full flex items-center justify-between gap-2.5 p-2.5 rounded-xl border-2 border-dashed transition-all cursor-pointer ${
+                        voucherFileName 
+                          ? 'border-emerald-500 bg-emerald-50/60 shadow-sm' 
+                          : 'border-slate-300 hover:border-clinic-emerald bg-white hover:bg-slate-50'
+                      }`}>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                            voucherFileName ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            {voucherFileName ? <CheckCircle className="w-3.5 h-3.5" /> : <Upload className="w-3.5 h-3.5" />}
+                          </div>
+                          <div className="min-w-0">
+                            <span className={`block text-[11px] font-bold truncate ${voucherFileName ? 'text-emerald-950' : 'text-slate-700'}`}>
+                              {voucherFileName ? voucherFileName : 'Subir imagen o comprobante PDF'}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block">
+                              {voucherFileName ? '✓ Archivo adjuntado con éxito' : 'Formatos JPG, PNG, PDF'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {voucherFileName ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setVoucherFileName('');
+                            }}
+                            className="p-1 text-red-500 hover:bg-red-100 rounded-lg text-xs shrink-0 cursor-pointer"
+                            title="Quitar archivo"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 shrink-0">
+                            Examinar
+                          </span>
+                        )}
+
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setVoucherFileName(file.name);
+                              if (voucherError) setVoucherError('');
+                            }
+                          }}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {voucherError && (
+                    <div className="flex items-center gap-1.5 p-2 bg-red-50 border border-red-200 rounded-xl text-[11px] text-red-700 font-bold">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{voucherError}</span>
+                    </div>
+                  )}
+
                 </div>
+
               </div>
 
-              {voucherError && (
-                <div className="flex items-center gap-1.5 p-2 bg-red-50 border border-red-200 rounded-xl text-[11px] text-red-700 font-bold">
-                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                  <span>{voucherError}</span>
-                </div>
-              )}
             </div>
 
-            {/* Confirm Turno Button */}
-            <div className="pt-2">
+            {/* PIE FIJO CON BOTÓN CONFIRMAR TURNO Y PAGO */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200/80 shrink-0">
               <button
                 type="button"
                 onClick={handleConfirmTurno}
                 disabled={!voucherNumber.trim() && !voucherFileName.trim()}
-                className={`w-full py-4 text-white font-extrabold text-sm sm:text-base rounded-2xl transition-all flex items-center justify-center gap-2 ${
+                className={`w-full py-3.5 text-white font-extrabold text-sm sm:text-base rounded-2xl transition-all flex items-center justify-center gap-2 ${
                   !voucherNumber.trim() && !voucherFileName.trim()
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-80'
                     : 'bg-clinic-emerald hover:bg-clinic-emeraldHover shadow-emerald-glow active:scale-[0.98] cursor-pointer'
