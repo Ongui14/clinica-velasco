@@ -943,6 +943,12 @@ export default function App() {
   // Filter appointments for Doctor Panel
   const doctorAppointments = appointments.filter(a => a.doctor === selectedDoctorId);
 
+  // Turnos activos para el Paciente: excluye automáticamente las citas con estado 'Atendido' o 'Atendida'
+  const activePatientAppointments = appointments.filter(app => {
+    const s = (app.status || '').toLowerCase().trim();
+    return s !== 'atendido' && s !== 'atendida';
+  });
+
   // Helper para clasificar citas según el periodo seleccionado en Caja / Admin
   const getPeriodAppointments = () => {
     const todayISO = new Date().toISOString().slice(0, 10);
@@ -1716,11 +1722,11 @@ export default function App() {
                 </div>
 
                 <span className="text-xs font-black px-3 py-1 rounded-full bg-clinic-light text-clinic-dark">
-                  {appointments.length} Cita{appointments.length === 1 ? '' : 's'}
+                  {activePatientAppointments.length} Cita{activePatientAppointments.length === 1 ? '' : 's'} Activa{activePatientAppointments.length === 1 ? '' : 's'}
                 </span>
               </div>
 
-              {appointments.length === 0 ? (
+              {activePatientAppointments.length === 0 ? (
                 <div className="bg-white rounded-3xl p-10 text-center border border-slate-200/90 shadow-soft-sm space-y-4 max-w-md mx-auto">
                   <div className="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
                     <Calendar className="w-8 h-8" />
@@ -1741,7 +1747,7 @@ export default function App() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {appointments.map((ticket) => (
+                  {activePatientAppointments.map((ticket) => (
                     <div
                       key={ticket.id}
                       className="bg-white rounded-3xl border border-slate-200/90 shadow-xl shadow-emerald-950/5 overflow-hidden flex flex-col justify-between transition-all hover:shadow-2xl hover:shadow-emerald-900/10"
@@ -3374,7 +3380,7 @@ export default function App() {
             >
               <div className={`p-1 rounded-xl transition-colors relative ${activeTab === 'turnos' ? 'bg-clinic-light text-clinic-emerald' : ''}`}>
                 <CalendarCheck className="w-5 h-5" />
-                {appointments.length > 0 && (
+                {activePatientAppointments.length > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-clinic-emerald ring-2 ring-white animate-pulse" />
                 )}
               </div>
