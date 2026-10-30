@@ -466,7 +466,6 @@ export default function App() {
   const [selectedSpecialtyForBooking, setSelectedSpecialtyForBooking] = useState(null);
   const [selectedDateLabel, setSelectedDateLabel] = useState('Hoy');
   const [selectedHour, setSelectedHour] = useState('');
-  const [voucherNumber, setVoucherNumber] = useState('');
   const [voucherFileName, setVoucherFileName] = useState('');
   const [voucherError, setVoucherError] = useState('');
   const [bookingSuccessModal, setBookingSuccessModal] = useState(null);
@@ -522,7 +521,6 @@ export default function App() {
     setSelectedSpecialtyForBooking(spec);
     setSelectedHour(spec.hours[0] || '10:00');
     setSelectedDateLabel('Hoy');
-    setVoucherNumber('');
     setVoucherFileName('');
     setVoucherError('');
   };
@@ -2869,16 +2867,16 @@ export default function App() {
                     <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
                       Fecha de Consulta:
                     </span>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['Hoy', 'Mañana', 'Próx. Día'].map((d) => (
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {['Hoy', 'Mañana'].map((d) => (
                         <button
                           type="button"
                           key={d}
                           onClick={() => setSelectedDateLabel(d)}
-                          className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          className={`w-full py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer text-center ${
                             selectedDateLabel === d
                               ? 'bg-clinic-dark text-white shadow-sm'
-                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
                           }`}
                         >
                           {d}
