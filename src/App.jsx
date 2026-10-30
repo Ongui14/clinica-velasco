@@ -46,7 +46,13 @@ import {
   Receipt,
   Upload,
   CheckCircle,
-  FileText
+  FileText,
+  History,
+  QrCode,
+  Image as ImageIcon,
+  FileSpreadsheet,
+  Layers,
+  ClipboardList
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import VelascoLogo from './components/VelascoLogo';
@@ -117,6 +123,48 @@ const LOCAL_STORAGE_CITAS_KEY = 'clinica_velasco_citas';
 const LOCAL_STORAGE_SPECIALTIES_KEY = 'clinica_velasco_especialidades';
 const LOCAL_STORAGE_EMERGENCY_ALERTS_KEY = 'clinica_velasco_alertas_emergencia';
 const LOCAL_STORAGE_AMBULANCE_STATUS_KEY = 'clinica_velasco_estado_ambulancia';
+const LOCAL_STORAGE_MEDICAL_HISTORY_KEY = 'clinica_velasco_historial_medico';
+const LOCAL_STORAGE_QR_CONFIG_KEY = 'clinica_velasco_qr_config';
+
+// Registros de demostración iniciales de Historial Clínico Unificado
+const INITIAL_MEDICAL_HISTORY = [
+  {
+    id: 'HC-001',
+    patientName: 'Ejemplo Paciente',
+    patientPhone: '72812345',
+    date: '14 de Octubre, 2026',
+    time: '16:30',
+    specialty: 'Ginecología y Obstetricia',
+    doctor: 'Dra. Carmen Mendoza',
+    diagnosis: 'Control posparto favorable. Paciente refiere episodios aislados de taquicardia diurna y fatiga moderada sin disnea.',
+    referralNotes: 'Se deriva a Cardiología / Medicina Interna para ecocardiograma Doppler y control de presión arterial.',
+    status: 'Derivado'
+  },
+  {
+    id: 'HC-002',
+    patientName: 'Ejemplo Paciente',
+    patientPhone: '72812345',
+    date: '20 de Octubre, 2026',
+    time: '10:15',
+    specialty: 'Cirugía General y Laparoscópica',
+    doctor: 'Dr. Alejandro Velasco',
+    diagnosis: 'Evaluación de dolor en hipocondrio derecho posprandial. Sospecha de colelitiasis recurrente.',
+    referralNotes: 'Solicitada ecografía hepatobiliopancreática. Mantener dieta hipograsa y programar resolución quirúrgica.',
+    status: 'En Seguimiento'
+  }
+];
+
+// Configuración de cobro QR por defecto
+const DEFAULT_QR_CONFIG = {
+  bankName: 'Banco Nacional de Bolivia (BNB)',
+  accountHolder: 'Clínica Velasco S.R.L.',
+  accountNumber: 'Cta. Cte. 400-0129381',
+  amount: 150,
+  nit: '1028394021',
+  note: 'Trinidad, Beni • Consulta Ambulatoria General',
+  qrImage: null // Si es null, se muestra el vector QR elegante
+};
+
 
 // Helper icon getter
 function getSpecialtyIcon(iconName, className = "w-6 h-6") {
@@ -250,6 +298,42 @@ export default function App() {
     } catch (e) {}
   }, [ambulanceStatus]);
 
+  // Configuración de cobro QR (Admin editable y visible en el modal del paciente)
+  const [qrConfig, setQrConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_QR_CONFIG_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return DEFAULT_QR_CONFIG;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_QR_CONFIG_KEY, JSON.stringify(qrConfig));
+    } catch (e) {}
+  }, [qrConfig]);
+
+  // Historial Clínico Unificado (Compartido para todos los médicos)
+  const [medicalHistory, setMedicalHistory] = useState(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_MEDICAL_HISTORY_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return INITIAL_MEDICAL_HISTORY;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_MEDICAL_HISTORY_KEY, JSON.stringify(medicalHistory));
+    } catch (e) {}
+  }, [medicalHistory]);
+
+  // Modal de Historial Clínico en Panel Médico
+  const [activeHistoryPatient, setActiveHistoryPatient] = useState(null);
+  const [newDiagnosis, setNewDiagnosis] = useState('');
+  const [newReferralNotes, setNewReferralNotes] = useState('');
+  const [historySavedNotification, setHistorySavedNotification] = useState('');
+
   // Selected Doctor for Doctor Panel
   const [selectedDoctorId, setSelectedDoctorId] = useState('Dr. Alejandro Velasco');
 
@@ -378,6 +462,47 @@ export default function App() {
       return app;
     }));
   };
+  // Doctor Action: Abrir Historial Clínico de un paciente
+  const handleOpenPatientHistory = (app) => {
+    setActiveHistoryPatient(app);
+    setNewDiagnosis('');
+    setNewReferralNotes('');
+    setHistorySavedNotification('');
+  };
+
+  // Doctor Action: Guardar nueva evolución en el Historial Clínico Unificado
+  const handleSaveMedicalHistoryEntry = (e) => {
+    e.preventDefault();
+    if (!newDiagnosis.trim() || !activeHistoryPatient) return;
+
+    const newEntry = {
+      id: `HC-${Date.now().toString().slice(-4)}`,
+      patientName: activeHistoryPatient.patientName,
+      patientPhone: activeHistoryPatient.patientPhone,
+      date: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      specialty: activeHistoryPatient.specialty || 'Consulta Externa',
+      doctor: selectedDoctorId,
+      diagnosis: newDiagnosis.trim(),
+      referralNotes: newReferralNotes.trim() || 'Sin observaciones de derivación adicionales.',
+      status: newReferralNotes.trim() ? 'Derivado / En Seguimiento' : 'Consulta Finalizada'
+    };
+
+    setMedicalHistory(prev => [newEntry, ...prev]);
+
+    // Marcar la cita como atendida si corresponde
+    if (activeHistoryPatient.id) {
+      handleDoctorMarkAttended(activeHistoryPatient.id);
+    }
+
+    setNewDiagnosis('');
+    setNewReferralNotes('');
+    setHistorySavedNotification('¡Evolución clínica guardada exitosamente y compartida con el equipo médico!');
+    setTimeout(() => {
+      setHistorySavedNotification('');
+    }, 3500);
+  };
+
 
   // Share Ticket WhatsApp
   const handleShareWhatsAppTicket = (ticket) => {
@@ -1632,6 +1757,170 @@ export default function App() {
             )}
           </div>
 
+          {/* SECCIÓN: CONFIGURACIÓN DE COBRO QR DE LA CLÍNICA (ADMIN) */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-soft-sm space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-clinic-light text-clinic-dark flex items-center justify-center">
+                  <QrCode className="w-5 h-5 text-clinic-emerald" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-clinic-emerald bg-emerald-50 px-2.5 py-0.5 rounded-full inline-block">
+                    Caja & Finanzas
+                  </span>
+                  <h3 className="text-lg font-display font-extrabold text-slate-900 mt-0.5">
+                    Configuración de Cobro QR de la Clínica
+                  </h3>
+                </div>
+              </div>
+              <span className="text-xs text-slate-500 bg-slate-50 px-3 py-1 rounded-full border border-slate-200">
+                Se refleja en vivo al agendar turnos
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* Preview del QR Configurado */}
+              <div className="lg:col-span-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center space-y-3 flex flex-col items-center">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Vista Previa del QR Activo
+                </span>
+                
+                <div className="w-40 h-40 bg-white rounded-2xl p-2.5 border-2 border-emerald-300 shadow-md flex items-center justify-center relative overflow-hidden group">
+                  {qrConfig.qrImage ? (
+                    <img 
+                      src={qrConfig.qrImage} 
+                      alt="QR Bancario" 
+                      className="w-full h-full object-contain rounded-xl"
+                    />
+                  ) : (
+                    <div className="w-full h-full border-2 border-slate-800 rounded-xl p-2 flex flex-col items-center justify-between bg-white">
+                      <div className="w-full flex justify-between items-center">
+                        <div className="w-6 h-6 bg-slate-900 rounded-sm"></div>
+                        <div className="w-6 h-6 bg-slate-900 rounded-sm"></div>
+                      </div>
+                      <div className="w-12 h-2 bg-clinic-emerald rounded-full my-auto"></div>
+                      <div className="w-full flex justify-between items-center">
+                        <div className="w-6 h-6 bg-slate-900 rounded-sm"></div>
+                        <div className="w-3 h-3 bg-clinic-dark rounded-sm"></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {qrConfig.qrImage && (
+                    <button
+                      type="button"
+                      onClick={() => setQrConfig(prev => ({ ...prev, qrImage: null }))}
+                      className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-xs cursor-pointer"
+                      title="Eliminar imagen y volver al QR por defecto"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="text-xs">
+                  <strong className="block text-slate-900">{qrConfig.bankName}</strong>
+                  <span className="text-slate-500">{qrConfig.accountHolder}</span>
+                  <span className="block font-black text-clinic-emerald text-sm mt-1">Bs. {qrConfig.amount}</span>
+                </div>
+              </div>
+
+              {/* Formulario de Configuración del Administrador */}
+              <div className="lg:col-span-8 space-y-4 text-xs">
+                
+                {/* Subir nueva imagen del QR */}
+                <div className="space-y-1">
+                  <label className="block font-bold text-slate-700">
+                    Subir nueva imagen del QR oficial (BNB, BCP, Ganadero, etc.):
+                  </label>
+                  <label className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl cursor-pointer transition-colors">
+                    <div className="w-8 h-8 rounded-lg bg-clinic-emerald text-white flex items-center justify-center shrink-0">
+                      <Upload className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="block font-bold text-slate-800 text-xs">
+                        {qrConfig.qrImage ? '✓ Imagen de QR cargada (Haz clic para cambiar)' : 'Seleccionar imagen del QR desde el dispositivo'}
+                      </span>
+                      <span className="block text-[11px] text-slate-400">
+                        Formatos soportados: JPG, PNG, WebP
+                      </span>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setQrConfig(prev => ({ ...prev, qrImage: reader.result }));
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1">
+                    <label className="block font-bold text-slate-700">Entidad Bancaria:</label>
+                    <input
+                      type="text"
+                      value={qrConfig.bankName}
+                      onChange={(e) => setQrConfig(prev => ({ ...prev, bankName: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinic-emerald"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block font-bold text-slate-700">Titular de Cuenta:</label>
+                    <input
+                      type="text"
+                      value={qrConfig.accountHolder}
+                      onChange={(e) => setQrConfig(prev => ({ ...prev, accountHolder: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinic-emerald"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block font-bold text-slate-700">Monto Base de Consulta (Bs.):</label>
+                    <input
+                      type="number"
+                      value={qrConfig.amount}
+                      onChange={(e) => setQrConfig(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinic-emerald"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block font-bold text-slate-700">NIT / Facturación:</label>
+                    <input
+                      type="text"
+                      value={qrConfig.nit}
+                      onChange={(e) => setQrConfig(prev => ({ ...prev, nit: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinic-emerald"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block font-bold text-slate-700">Nota informativa para el Paciente:</label>
+                  <input
+                    type="text"
+                    value={qrConfig.note}
+                    onChange={(e) => setQrConfig(prev => ({ ...prev, note: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-clinic-emerald"
+                  />
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {specialtiesList.map((spec) => (
               <div 
@@ -1866,6 +2155,15 @@ export default function App() {
                       >
                         <Megaphone className="w-3.5 h-3.5" />
                         <span>📢 Llamar a Puerta</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleOpenPatientHistory(app)}
+                        className="inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-clinic-light hover:bg-emerald-100 text-clinic-dark font-extrabold text-xs rounded-xl transition-all cursor-pointer border border-clinic-emerald/30 shadow-sm"
+                        title="Ver antecedentes clínicos e interconsultas del paciente"
+                      >
+                        <History className="w-3.5 h-3.5 text-clinic-emerald" />
+                        <span>Historial Clínico</span>
                       </button>
 
                       <button
@@ -2150,28 +2448,46 @@ export default function App() {
 
                 <div className="text-right">
                   <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Monto</span>
-                  <span className="text-sm font-black text-clinic-dark bg-white px-2.5 py-0.5 rounded-lg border border-emerald-200 inline-block shadow-sm">
-                    Bs. 150
-                  </span>
+                  <span className="text-sm font-black text-clinic-dark bg-white px-2.5 py-0.5 rounded-lg border border-emerald-200 inline-block shadow-sm">Bs. {qrConfig.amount}</span>
                 </div>
               </div>
 
-              {/* Tarjeta Visual de QR Simple Interactivo */}
-              <div className="bg-white p-3 rounded-xl border border-slate-200/80 flex items-center gap-3 shadow-soft-sm">
-                <div className="w-16 h-16 bg-slate-900 rounded-xl flex items-center justify-center text-white shrink-0 p-1.5 relative overflow-hidden group">
-                  <div className="w-full h-full border-2 border-white/80 rounded-lg flex flex-col items-center justify-center p-1 bg-white">
-                    <div className="w-3 h-3 bg-slate-900 rounded-sm self-start"></div>
-                    <div className="w-4 h-1 bg-clinic-emerald my-0.5"></div>
-                    <div className="w-3 h-3 bg-slate-900 rounded-sm self-end"></div>
-                  </div>
-                  <span className="absolute bottom-0 inset-x-0 bg-clinic-dark text-[8px] font-black text-center text-white py-0.5">
-                    QR OFICIAL
+              {/* Tarjeta Visual de QR Oficial Dinámico */}
+              <div className="bg-white p-3.5 rounded-2xl border border-emerald-200/90 flex flex-col sm:flex-row items-center gap-3.5 shadow-soft-sm">
+                <div className="w-24 h-24 sm:w-20 sm:h-20 bg-slate-900 rounded-2xl flex items-center justify-center text-white shrink-0 p-1.5 relative overflow-hidden shadow-inner group">
+                  {qrConfig.qrImage ? (
+                    <img 
+                      src={qrConfig.qrImage} 
+                      alt="QR Oficial" 
+                      className="w-full h-full object-contain rounded-xl bg-white" 
+                    />
+                  ) : (
+                    <div className="w-full h-full border-2 border-white/90 rounded-xl flex flex-col items-center justify-between p-1 bg-white">
+                      <div className="w-full flex justify-between items-center">
+                        <div className="w-3 h-3 bg-slate-900 rounded-sm"></div>
+                        <div className="w-3 h-3 bg-slate-900 rounded-sm"></div>
+                      </div>
+                      <div className="w-6 h-1.5 bg-clinic-emerald rounded-full my-auto"></div>
+                      <div className="w-full flex justify-between items-center">
+                        <div className="w-3 h-3 bg-slate-900 rounded-sm"></div>
+                        <div className="w-2 h-2 bg-clinic-dark rounded-sm"></div>
+                      </div>
+                    </div>
+                  )}
+                  <span className="absolute bottom-0 inset-x-0 bg-clinic-dark text-[7px] sm:text-[8px] font-black text-center text-white py-0.5 tracking-wider">
+                    QR HABILITADO
                   </span>
                 </div>
-                <div className="text-[11px] leading-tight">
-                  <strong className="block text-slate-900 font-bold">Banco Nacional de Bolivia (BNB)</strong>
-                  <span className="text-slate-600">Cuenta: <strong>Clínica Velasco S.R.L.</strong></span>
-                  <span className="text-slate-500 block text-[10px] mt-0.5">Trinidad • NIT: 1028394021</span>
+                <div className="text-[11px] leading-snug w-full space-y-1">
+                  <div className="flex items-center justify-between">
+                    <strong className="text-slate-900 font-extrabold text-xs">{qrConfig.bankName}</strong>
+                    <span className="text-[10px] font-bold text-clinic-emerald bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                      Bs. {qrConfig.amount}
+                    </span>
+                  </div>
+                  <span className="text-slate-600 block">Titular: <strong>{qrConfig.accountHolder}</strong></span>
+                  <span className="text-slate-500 block text-[10px]">{qrConfig.accountNumber} • NIT: {qrConfig.nit}</span>
+                  <span className="text-[10px] text-clinic-dark font-semibold block pt-0.5">ℹ️ {qrConfig.note}</span>
                 </div>
               </div>
 
@@ -2378,6 +2694,171 @@ export default function App() {
                 Ver en Mis Citas
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* ========================================================
+          MODAL HISTORIAL CLÍNICO UNIFICADO (INTERCONSULTA)
+         ======================================================== */}
+      {activeHistoryPatient && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-5 animate-fade-in overflow-y-auto">
+          <div className="w-full max-w-2xl bg-white rounded-3xl p-5 sm:p-7 shadow-2xl border border-slate-200 space-y-5 animate-slide-up my-auto max-h-[92vh] overflow-y-auto">
+            
+            {/* Header del Historial */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-clinic-dark text-white flex items-center justify-center">
+                  <ClipboardList className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-clinic-emerald bg-emerald-50 px-2.5 py-0.5 rounded-full inline-block">
+                    Expediente Digital Unificado • Interconsulta
+                  </span>
+                  <h3 className="text-lg sm:text-xl font-display font-extrabold text-slate-900 mt-0.5">
+                    Historial Clínico: {activeHistoryPatient.patientName}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Tel: {activeHistoryPatient.patientPhone} • Registro médico compartido en Clínica Velasco
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveHistoryPatient(null)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {historySavedNotification && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-900 font-bold flex items-center gap-2 animate-fade-in">
+                <CheckCircle2 className="w-4 h-4 text-clinic-emerald shrink-0" />
+                <span>{historySavedNotification}</span>
+              </div>
+            )}
+
+            {/* Línea de tiempo de visitas previas */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <History className="w-4 h-4 text-clinic-emerald" />
+                  Evolución y Atenciones Anteriores ({
+                    medicalHistory.filter(h => h.patientName === activeHistoryPatient.patientName || h.patientPhone === activeHistoryPatient.patientPhone).length
+                  })
+                </h4>
+                <span className="text-[10px] text-slate-400 font-semibold">Más recientes primero</span>
+              </div>
+
+              <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                {medicalHistory.filter(h => h.patientName === activeHistoryPatient.patientName || h.patientPhone === activeHistoryPatient.patientPhone).length === 0 ? (
+                  <p className="text-xs text-slate-400 p-4 bg-slate-50 rounded-2xl text-center">
+                    Este paciente no cuenta con registros históricos previos en el sistema.
+                  </p>
+                ) : (
+                  medicalHistory
+                    .filter(h => h.patientName === activeHistoryPatient.patientName || h.patientPhone === activeHistoryPatient.patientPhone)
+                    .map((item) => (
+                      <div 
+                        key={item.id} 
+                        className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2 hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-clinic-dark bg-clinic-light px-2.5 py-0.5 rounded-lg text-[11px]">
+                              {item.specialty}
+                            </span>
+                            <span className="font-bold text-slate-800">{item.doctor}</span>
+                          </div>
+                          <span className="text-[11px] text-slate-400 font-medium">
+                            📅 {item.date} {item.time ? `• ${item.time}` : ''}
+                          </span>
+                        </div>
+
+                        <div className="text-xs space-y-1.5 pt-1">
+                          <div>
+                            <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">
+                              Diagnóstico / Motivo:
+                            </span>
+                            <p className="text-slate-800 font-medium leading-relaxed">
+                              {item.diagnosis}
+                            </p>
+                          </div>
+
+                          {item.referralNotes && (
+                            <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/70 text-amber-950">
+                              <span className="font-bold block text-[10px] uppercase tracking-wider text-amber-800">
+                                🧭 Notas de Derivación / Interconsulta:
+                              </span>
+                              <p className="text-[11px] font-medium leading-relaxed mt-0.5">
+                                {item.referralNotes}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+
+            {/* Formulario para agregar nueva evolución médica actual */}
+            <form onSubmit={handleSaveMedicalHistoryEntry} className="p-4 sm:p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase tracking-wider text-clinic-dark flex items-center gap-1.5">
+                  <Edit3 className="w-4 h-4 text-clinic-emerald" />
+                  Nueva Entrada Médica ({selectedDoctorId})
+                </span>
+                <span className="text-[10px] text-slate-500 font-semibold">Consulta en curso</span>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[11px] font-bold text-slate-700">
+                  Diagnóstico / Evolución Clínica:
+                </label>
+                <textarea
+                  rows={2}
+                  required
+                  value={newDiagnosis}
+                  onChange={(e) => setNewDiagnosis(e.target.value)}
+                  placeholder="Describa el diagnóstico, hallazgos clínicos y tratamiento indicado..."
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-clinic-emerald resize-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[11px] font-bold text-slate-700">
+                  Derivación / Observaciones para otro especialista:
+                </label>
+                <input
+                  type="text"
+                  value={newReferralNotes}
+                  onChange={(e) => setNewReferralNotes(e.target.value)}
+                  placeholder="Ej. Derivar a Cardiología para ecocardiograma o control quirúrgico en 7 días..."
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-clinic-emerald"
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1">
+                <p className="text-[10px] text-slate-500">
+                  Al guardar, se añade al historial unificado y se marca la consulta como atendida.
+                </p>
+                <button
+                  type="submit"
+                  disabled={!newDiagnosis.trim()}
+                  className={`w-full sm:w-auto px-5 py-2.5 rounded-xl font-bold text-xs text-white transition-all shadow-sm flex items-center justify-center gap-1.5 ${
+                    newDiagnosis.trim()
+                      ? 'bg-clinic-emerald hover:bg-clinic-emeraldHover cursor-pointer shadow-emerald-glow'
+                      : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  }`}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Guardar Evolución</span>
+                </button>
+              </div>
+            </form>
+
           </div>
         </div>
       )}
