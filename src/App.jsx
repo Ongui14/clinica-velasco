@@ -52,7 +52,13 @@ import {
   Image as ImageIcon,
   FileSpreadsheet,
   Layers,
-  ClipboardList
+  ClipboardList,
+  Printer,
+  DollarSign,
+  Wallet,
+  TrendingUp,
+  BarChart3,
+  CalendarRange
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import VelascoLogo from './components/VelascoLogo';
@@ -64,6 +70,7 @@ const INITIAL_SPECIALTIES = [
     name: 'Cirugía', 
     subRole: 'Cirugía General y Laparoscópica',
     doctor: 'Dr. Alejandro Velasco', 
+    price: 150,
     status: '🟢 Atendiendo Ahora', // '🟢 Atendiendo Ahora' | '🟡 En Cirugía / Pausa' | '🔴 Fuera de Turno'
     room: 'Consultorio 101 - PB',
     locationGuide: 'Planta Baja, Pasillo Derecho al lado de Farmacia Central',
@@ -75,6 +82,7 @@ const INITIAL_SPECIALTIES = [
     name: 'Pediatría', 
     subRole: 'Pediatría Integral y Neonatología',
     doctor: 'Dra. Carmen Mendoza', 
+    price: 180,
     status: '🟢 Atendiendo Ahora',
     room: 'Consultorio 104 - PB',
     locationGuide: 'Planta Baja, Ala Materno-Infantil frente a Sala de Juegos',
@@ -86,6 +94,7 @@ const INITIAL_SPECIALTIES = [
     name: 'Neurocirugía', 
     subRole: 'Neurocirugía y Columna',
     doctor: 'Dr. Mauricio Arce', 
+    price: 250,
     status: '🟡 En Cirugía / Pausa',
     room: 'Consultorio 202 - Piso 1',
     locationGuide: 'Piso 1, subiendo por ascensor principal a mano izquierda',
@@ -97,6 +106,7 @@ const INITIAL_SPECIALTIES = [
     name: 'Terapia', 
     subRole: 'Terapia Intensiva (UTI)',
     doctor: 'Dr. Fernando Suárez', 
+    price: 300,
     status: '🟢 Atendiendo Ahora',
     room: 'Unidad UTI - Piso 1',
     locationGuide: 'Piso 1, Acceso Restringido UTI por pasillo central',
@@ -221,19 +231,133 @@ export default function App() {
       const saved = localStorage.getItem(LOCAL_STORAGE_CITAS_KEY);
       if (saved) return JSON.parse(saved);
     } catch (e) {}
+    // Fechas dinámicas para la demostración
+    const now = new Date();
+    const dHoy = now.toISOString().slice(0, 10);
+    const dHace2Dias = new Date(now.getTime() - 2 * 86400000).toISOString().slice(0, 10);
+    const dHace4Dias = new Date(now.getTime() - 4 * 86400000).toISOString().slice(0, 10);
+    const dHace12Dias = new Date(now.getTime() - 12 * 86400000).toISOString().slice(0, 10);
+    const dHace18Dias = new Date(now.getTime() - 18 * 86400000).toISOString().slice(0, 10);
+
     return [
       {
         id: 'CV-4819',
         specialty: 'Cirugía',
         subRole: 'Cirugía General y Laparoscópica',
         doctor: 'Dr. Alejandro Velasco',
+        price: 150,
         room: 'Consultorio 101 - PB',
         locationGuide: 'Planta Baja, Pasillo Derecho al lado de Farmacia Central',
         date: 'Hoy',
+        dateISO: dHoy,
         hour: '10:00',
         patientName: 'Ejemplo Paciente',
         patientPhone: '72812345',
-        status: 'Programado' // 'Programado' | 'Llamando en puerta' | 'Atendido'
+        voucherRef: 'BNB-92841920',
+        paymentStatus: 'Verificado y Aprobado',
+        status: 'Programado'
+      },
+      {
+        id: 'CV-4822',
+        specialty: 'Pediatría',
+        subRole: 'Pediatría Integral y Neonatología',
+        doctor: 'Dra. Carmen Mendoza',
+        price: 180,
+        room: 'Consultorio 104 - PB',
+        locationGuide: 'Planta Baja, Ala Materno-Infantil frente a Sala de Juegos',
+        date: 'Hoy',
+        dateISO: dHoy,
+        hour: '11:00',
+        patientName: 'Carlos Suárez Roca',
+        patientPhone: '73920194',
+        voucherRef: 'QR-5029184',
+        paymentStatus: 'Pendiente de Verificación Admin',
+        status: 'Programado'
+      },
+      {
+        id: 'CV-4825',
+        specialty: 'Neurocirugía',
+        subRole: 'Neurocirugía y Columna',
+        doctor: 'Dr. Mauricio Arce',
+        price: 250,
+        room: 'Consultorio 202 - Piso 1',
+        locationGuide: 'Piso 1, subiendo por ascensor principal a mano izquierda',
+        date: 'Hoy',
+        dateISO: dHoy,
+        hour: '15:30',
+        patientName: 'María Elena Justiniano',
+        patientPhone: '71029384',
+        voucherRef: 'Bisa-3819204',
+        paymentStatus: 'Verificado y Aprobado',
+        status: 'Programado'
+      },
+      {
+        id: 'CV-4790',
+        specialty: 'Pediatría',
+        subRole: 'Pediatría Integral y Neonatología',
+        doctor: 'Dra. Carmen Mendoza',
+        price: 180,
+        room: 'Consultorio 104 - PB',
+        locationGuide: 'Planta Baja, Ala Materno-Infantil',
+        date: 'Hace 2 días',
+        dateISO: dHace2Dias,
+        hour: '09:15',
+        patientName: 'Mateo Vaca Rivero',
+        patientPhone: '68291039',
+        voucherRef: 'BNB-1029381',
+        paymentStatus: 'Verificado y Aprobado',
+        status: 'Atendido'
+      },
+      {
+        id: 'CV-4785',
+        specialty: 'Terapia',
+        subRole: 'Terapia Intensiva (UTI)',
+        doctor: 'Dr. Fernando Suárez',
+        price: 300,
+        room: 'Unidad UTI - Piso 1',
+        locationGuide: 'Piso 1, Acceso Restringido UTI',
+        date: 'Hace 4 días',
+        dateISO: dHace4Dias,
+        hour: '11:30',
+        patientName: 'Roberto Antelo Saucedo',
+        patientPhone: '72839102',
+        voucherRef: 'Transf-992019',
+        paymentStatus: 'Verificado y Aprobado',
+        status: 'Atendido'
+      },
+      {
+        id: 'CV-4740',
+        specialty: 'Cirugía',
+        subRole: 'Cirugía General y Laparoscópica',
+        doctor: 'Dr. Alejandro Velasco',
+        price: 150,
+        room: 'Consultorio 101 - PB',
+        locationGuide: 'Planta Baja, Pasillo Derecho',
+        date: 'Hace 12 días',
+        dateISO: dHace12Dias,
+        hour: '16:00',
+        patientName: 'Lucía Hurtado Paz',
+        patientPhone: '71829304',
+        voucherRef: 'Union-491029',
+        paymentStatus: 'Verificado y Aprobado',
+        status: 'Atendido'
+      },
+      {
+        id: 'CV-4712',
+        specialty: 'Neurocirugía',
+        subRole: 'Neurocirugía y Columna',
+        doctor: 'Dr. Mauricio Arce',
+        price: 250,
+        room: 'Consultorio 202 - Piso 1',
+        locationGuide: 'Piso 1, Consultorio 202',
+        date: 'Hace 18 días',
+        dateISO: dHace18Dias,
+        hour: '17:00',
+        patientName: 'Jorge Parada Méndez',
+        patientPhone: '69481920',
+        voucherRef: 'BNB-883019',
+        paymentStatus: 'Verificado y Aprobado',
+        status: 'Atendido'
       }
     ];
   });
@@ -356,6 +480,10 @@ export default function App() {
   const [isLocating, setIsLocating] = useState(false);
   const [locationStatusMsg, setLocationStatusMsg] = useState('');
 
+  // Estados del Módulo Financiero y Cierre de Caja (Admin / Caja)
+  const [financialPeriod, setFinancialPeriod] = useState('hoy'); // 'hoy' | 'semana' | 'mes'
+  const [showPrintReportModal, setShowPrintReportModal] = useState(false);
+
   // Admin Panel Editing State
   const [editingSpecialtyId, setEditingSpecialtyId] = useState(null);
   const [newHourInput, setNewHourInput] = useState('');
@@ -413,9 +541,11 @@ export default function App() {
       specialty: selectedSpecialtyForBooking.name,
       subRole: selectedSpecialtyForBooking.subRole,
       doctor: selectedSpecialtyForBooking.doctor,
+      price: selectedSpecialtyForBooking.price || qrConfig.amount || 150,
       room: selectedSpecialtyForBooking.room,
       locationGuide: selectedSpecialtyForBooking.locationGuide || 'Recepción Central',
       date: selectedDateLabel,
+      dateISO: new Date().toISOString().slice(0, 10),
       hour: selectedHour,
       patientName: userProfile.name,
       patientPhone: userProfile.phone,
@@ -708,6 +838,75 @@ export default function App() {
 
   // Filter appointments for Doctor Panel
   const doctorAppointments = appointments.filter(a => a.doctor === selectedDoctorId);
+
+  // Helper para clasificar citas según el periodo seleccionado en Caja / Admin
+  const getPeriodAppointments = () => {
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const nowMs = Date.now();
+    const sevenDaysMs = 7 * 86400000;
+
+    return appointments.filter(app => {
+      // Si la fecha dice 'Hoy' o coincide con la fecha ISO de hoy
+      if (financialPeriod === 'hoy') {
+        if (app.date === 'Hoy') return true;
+        if (app.dateISO && app.dateISO === todayISO) return true;
+        return false;
+      }
+      
+      if (financialPeriod === 'semana') {
+        if (app.date === 'Hoy' || app.date.includes('Hace 2') || app.date.includes('Hace 4')) return true;
+        if (app.dateISO) {
+          const appMs = new Date(app.dateISO).getTime();
+          return (nowMs - appMs) <= sevenDaysMs && (nowMs - appMs) >= -86400000;
+        }
+        return false;
+      }
+
+      if (financialPeriod === 'mes') {
+        // Todo lo del mes en curso o citas con fechas relativas
+        if (app.date === 'Hoy' || app.date.includes('Hace') || !app.dateISO) return true;
+        const currentMonthPrefix = todayISO.slice(0, 7); // 'YYYY-MM'
+        return app.dateISO.startsWith(currentMonthPrefix);
+      }
+
+      return true;
+    });
+  };
+
+  const periodAppointments = getPeriodAppointments();
+
+  // Cálculos de resumen financiero para el periodo
+  const totalRecaudadoConfirmado = periodAppointments
+    .filter(a => a.paymentStatus === 'Verificado y Aprobado')
+    .reduce((sum, a) => sum + (Number(a.price) || qrConfig.amount || 150), 0);
+
+  const totalPendienteValidacion = periodAppointments
+    .filter(a => a.paymentStatus !== 'Verificado y Aprobado')
+    .reduce((sum, a) => sum + (Number(a.price) || qrConfig.amount || 150), 0);
+
+  const totalPacientesPeriodo = periodAppointments.length;
+  const totalPacientesConfirmados = periodAppointments.filter(a => a.paymentStatus === 'Verificado y Aprobado').length;
+
+  // Desglose por Médico / Especialidad en el periodo
+  const doctorBreakdown = specialtiesList.map(spec => {
+    const specApps = periodAppointments.filter(a => a.specialty === spec.name || a.doctor === spec.doctor);
+    const countTotal = specApps.length;
+    const countAprobados = specApps.filter(a => a.paymentStatus === 'Verificado y Aprobado').length;
+    const subtotal = specApps
+      .filter(a => a.paymentStatus === 'Verificado y Aprobado')
+      .reduce((sum, a) => sum + (Number(a.price) || spec.price || 150), 0);
+
+    return {
+      specId: spec.id,
+      name: spec.name,
+      doctor: spec.doctor,
+      price: spec.price || 150,
+      room: spec.room,
+      countTotal,
+      countAprobados,
+      subtotal
+    };
+  });
 
   return (
     <div className="min-h-screen bg-clinic-pearl flex flex-col justify-between selection:bg-clinic-emerald selection:text-white">
@@ -1094,6 +1293,9 @@ export default function App() {
                             <span className="text-[11px] text-clinic-emerald font-bold flex items-center gap-1 bg-emerald-50/80 px-2 py-0.5 rounded-lg border border-emerald-100">
                               <Building2 className="w-3 h-3 text-clinic-emerald shrink-0" />
                               <span className="truncate">{spec.room}</span>
+                            </span>
+                            <span className="text-[11px] font-black text-slate-800 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                              Bs. {spec.price || 150}
                             </span>
                             <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
                               • {spec.hours.length} horarios hoy
@@ -1500,7 +1702,7 @@ export default function App() {
                           </p>
                         </div>
 
-                        {/* Estado del voucher y verificación */}
+                        {/* Estado del voucher y verificación con Monto Bs */}
                         <div className="p-3 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 text-xs space-y-1.5">
                           <div className="flex items-center justify-between">
                             <span className="text-slate-500 font-semibold flex items-center gap-1 text-[11px]">
@@ -1509,6 +1711,12 @@ export default function App() {
                             </span>
                             <span className="font-bold text-slate-800 text-[11px] truncate max-w-[180px]">
                               {ticket.voucherRef || 'Registrado'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between pt-1 border-t border-emerald-100">
+                            <span className="text-slate-500 font-semibold text-[11px]">Monto Consulta:</span>
+                            <span className="font-extrabold text-clinic-dark text-xs bg-white px-2 py-0.5 rounded-lg border border-emerald-200">
+                              Bs. {ticket.price || 150}
                             </span>
                           </div>
                           <div className="flex items-center justify-between pt-1 border-t border-emerald-100">
@@ -1603,6 +1811,210 @@ export default function App() {
             </button>
           </div>
 
+                    {/* ========================================================
+              MÓDULO FINANCIERO Y REPORTES EN ADMIN / CAJA (DÍA, SEMANA, MES)
+             ======================================================== */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-soft-sm space-y-6">
+            
+            {/* Header del Cierre de Caja y Botón de Impresión */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-800 text-white flex items-center justify-center shadow-md">
+                  <Wallet className="w-6 h-6 text-emerald-200" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-clinic-emerald bg-emerald-50 px-2.5 py-0.5 rounded-full inline-block">
+                      Módulo Financiero y Caja
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                      Moneda: Bolivianos (Bs)
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-display font-extrabold text-slate-900 mt-1">
+                    Cierre de Caja y Reportes de Ingresos
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Control financiero por períodos con balance confirmado y montos por verificar.
+                  </p>
+                </div>
+              </div>
+
+              {/* Botón Destacado: Imprimir Reporte Gerencial */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowPrintReportModal(true)}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-clinic-dark hover:bg-clinic-dark/90 text-white text-xs font-extrabold rounded-xl shadow-md transition-all cursor-pointer active:scale-95 group"
+                >
+                  <Printer className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                  <span>Imprimir Reporte ({financialPeriod === 'hoy' ? 'Día' : financialPeriod === 'semana' ? 'Semana' : 'Mes'})</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Selector de Período: Hoy (Día), Esta Semana, Este Mes */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-2 sm:p-2.5 rounded-2xl border border-slate-200/80">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-600 px-2">
+                <CalendarRange className="w-4 h-4 text-clinic-emerald shrink-0" />
+                <span>Seleccionar Período de Balance:</span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-1.5 sm:flex sm:items-center">
+                {[
+                  { id: 'hoy', label: 'Hoy (Día)' },
+                  { id: 'semana', label: 'Esta Semana' },
+                  { id: 'mes', label: 'Este Mes' }
+                ].map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setFinancialPeriod(p.id)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer text-center ${
+                      financialPeriod === p.id
+                        ? 'bg-clinic-emerald text-white shadow-sm'
+                        : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 4 Tarjetas de Resumen Financiero Dinámicas */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              
+              {/* Tarjeta 1: Total Recaudado Confirmado */}
+              <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/60 p-4 rounded-2xl border border-emerald-200/90 shadow-soft-sm space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800">
+                    Recaudado Confirmado
+                  </span>
+                  <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs font-black shadow-sm">
+                    Bs
+                  </div>
+                </div>
+                <div>
+                  <span className="text-2xl sm:text-3xl font-display font-black text-emerald-950">
+                    Bs. {totalRecaudadoConfirmado.toLocaleString()}
+                  </span>
+                  <span className="block text-[11px] text-emerald-700 font-semibold mt-0.5">
+                    ✓ {totalPacientesConfirmados} pagos validados
+                  </span>
+                </div>
+              </div>
+
+              {/* Tarjeta 2: Monto Pendiente de Validación */}
+              <div className="bg-gradient-to-br from-amber-50 to-amber-100/60 p-4 rounded-2xl border border-amber-200/90 shadow-soft-sm space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-900">
+                    Pendiente Validación
+                  </span>
+                  <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center text-xs font-black shadow-sm">
+                    ⏳
+                  </div>
+                </div>
+                <div>
+                  <span className="text-2xl sm:text-3xl font-display font-black text-amber-950">
+                    Bs. {totalPendienteValidacion.toLocaleString()}
+                  </span>
+                  <span className="block text-[11px] text-amber-800 font-semibold mt-0.5">
+                    {periodAppointments.length - totalPacientesConfirmados} vouchers por revisar
+                  </span>
+                </div>
+              </div>
+
+              {/* Tarjeta 3: Total Pacientes en el Período */}
+              <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-2xl border border-slate-200/90 shadow-soft-sm space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700">
+                    Pacientes / Citas
+                  </span>
+                  <div className="w-7 h-7 rounded-lg bg-clinic-dark text-white flex items-center justify-center shadow-sm">
+                    <User className="w-4 h-4 text-emerald-400" />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-2xl sm:text-3xl font-display font-black text-slate-900">
+                    {totalPacientesPeriodo}
+                  </span>
+                  <span className="block text-[11px] text-slate-500 font-semibold mt-0.5">
+                    Registrados en {financialPeriod === 'hoy' ? 'el día de hoy' : financialPeriod === 'semana' ? 'los últimos 7 días' : 'este mes'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Tarjeta 4: Volumen Financiero Proyectado */}
+              <div className="bg-gradient-to-br from-teal-50 to-teal-100/60 p-4 rounded-2xl border border-teal-200/90 shadow-soft-sm space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-teal-800">
+                    Volumen Total Bruto
+                  </span>
+                  <div className="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center shadow-sm">
+                    <TrendingUp className="w-4 h-4 text-teal-200" />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-2xl sm:text-3xl font-display font-black text-teal-950">
+                    Bs. {(totalRecaudadoConfirmado + totalPendienteValidacion).toLocaleString()}
+                  </span>
+                  <span className="block text-[11px] text-teal-700 font-semibold mt-0.5">
+                    Confirmado + Pendiente
+                  </span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Resumen Desglosado por Médico / Especialidad */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <BarChart3 className="w-4 h-4 text-clinic-emerald" />
+                  Desglose de Ingresos por Especialidad ({financialPeriod === 'hoy' ? 'Hoy' : financialPeriod === 'semana' ? 'Esta Semana' : 'Este Mes'})
+                </span>
+                <span className="text-[11px] text-slate-500">
+                  Valores expresados en Bolivianos (Bs)
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {doctorBreakdown.map((item) => (
+                  <div 
+                    key={item.specId}
+                    className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 transition-colors flex flex-col justify-between space-y-2"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-slate-900 text-xs">
+                          {item.name}
+                        </span>
+                        <span className="text-[10px] font-black text-clinic-dark bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                          Tarifa: Bs. {item.price}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                        {item.doctor}
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs">
+                      <span className="text-slate-500 text-[11px]">
+                        {item.countTotal} cita{item.countTotal === 1 ? '' : 's'} ({item.countAprobados} cobr.)
+                      </span>
+                      <strong className="text-clinic-dark font-black">
+                        Bs. {item.subtotal.toLocaleString()}
+                      </strong>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
+
           {/* SECCIÓN NUEVA: CONTROL Y VERIFICACIÓN DE CITAS Y PAGOS EN TIEMPO REAL */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-soft-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
@@ -1659,6 +2071,12 @@ export default function App() {
                           <span className="text-slate-400">Horario:</span>
                           <span className="font-bold text-clinic-emerald">{app.hour} ({app.date})</span>
                         </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400">Tarifa Consulta:</span>
+                          <span className="font-black text-clinic-dark bg-white px-2 py-0.5 rounded-lg border border-slate-200">
+                            Bs. {app.price || 150}
+                          </span>
+                        </div>
                         <div className="flex justify-between items-center pt-1">
                           <span className="text-slate-400 flex items-center gap-1">
                             <Receipt className="w-3 h-3 text-clinic-emerald" /> Voucher:
@@ -1697,6 +2115,7 @@ export default function App() {
                         <th className="py-2.5 px-3">Especialidad / Médico</th>
                         <th className="py-2.5 px-3">Fecha y Hora</th>
                         <th className="py-2.5 px-3">Comprobante Voucher</th>
+                        <th className="py-2.5 px-3">Monto (Bs)</th>
                         <th className="py-2.5 px-3">Estado de Pago</th>
                         <th className="py-2.5 px-3 text-right">Acción</th>
                       </tr>
@@ -1723,6 +2142,11 @@ export default function App() {
                             <span className="inline-flex items-center gap-1 font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-lg text-[11px]">
                               <Receipt className="w-3 h-3 text-clinic-emerald" />
                               {app.voucherRef || 'Sin comprobante'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className="font-extrabold text-slate-900 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
+                              Bs. {app.price || 150}
                             </span>
                           </td>
                           <td className="py-3 px-3 whitespace-nowrap">
@@ -2448,7 +2872,9 @@ export default function App() {
 
                 <div className="text-right">
                   <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Monto</span>
-                  <span className="text-sm font-black text-clinic-dark bg-white px-2.5 py-0.5 rounded-lg border border-emerald-200 inline-block shadow-sm">Bs. {qrConfig.amount}</span>
+                  <span className="text-sm font-black text-clinic-dark bg-white px-2.5 py-0.5 rounded-lg border border-emerald-200 inline-block shadow-sm">
+                    Bs. {selectedSpecialtyForBooking.price || qrConfig.amount || 150}
+                  </span>
                 </div>
               </div>
 
@@ -2931,6 +3357,202 @@ export default function App() {
             </button>
 
           </nav>
+        </div>
+      )}
+
+
+      {/* ========================================================
+          MODAL / VISTA DE IMPRESIÓN GERENCIAL: CIERRE DE CAJA
+         ======================================================== */}
+      {showPrintReportModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in overflow-y-auto">
+          <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-slate-200 my-auto overflow-hidden flex flex-col max-h-[92vh]">
+            
+            {/* Barra de Acciones de la Modal (oculta al imprimir) */}
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0 print:hidden">
+              <div className="flex items-center gap-2">
+                <Printer className="w-5 h-5 text-emerald-400" />
+                <span className="text-sm font-extrabold">Vista Previa para Impresión • Cierre de Caja</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-clinic-emerald hover:bg-clinic-emeraldHover text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Imprimir Ahora (PDF / Papel)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPrintReportModal(false)}
+                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* DOCUMENTO FORMAL IMPRESO */}
+            <div id="printable-report" className="p-6 sm:p-10 space-y-6 overflow-y-auto print:overflow-visible print:p-0 text-slate-900 font-sans">
+              
+              {/* Membrete Oficial */}
+              <div className="border-b-2 border-slate-800 pb-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-clinic-dark text-white flex items-center justify-center font-black text-sm">
+                      CV
+                    </div>
+                    <div>
+                      <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">
+                        CLÍNICA VELASCO
+                      </h1>
+                      <p className="text-xs font-extrabold text-emerald-700 uppercase tracking-widest">
+                        Trinidad, Beni - Bolivia
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 pt-1">
+                    Av. Busch esq. Nicolás Suárez • Central Telefónica / Emergencias: (+591) 69400096
+                  </p>
+                  <p className="text-xs font-bold text-slate-700">
+                    NIT: 1028394021 • Autorización SNS Beni
+                  </p>
+                </div>
+
+                <div className="text-left sm:text-right space-y-1 bg-slate-50 sm:bg-transparent p-3 sm:p-0 rounded-xl border sm:border-0 border-slate-200">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-slate-900 text-white px-2.5 py-1 rounded-md inline-block">
+                    REPORTE GERENCIAL DE INGRESOS
+                  </span>
+                  <div className="text-xs font-extrabold text-slate-800 mt-1">
+                    Período: <span className="text-clinic-dark font-black">{financialPeriod === 'hoy' ? 'HOY (DÍA)' : financialPeriod === 'semana' ? 'ESTA SEMANA' : 'ESTE MES'}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Fecha de emisión: {new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })} - {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    Encargado de Caja: Administración General
+                  </p>
+                </div>
+              </div>
+
+              {/* Resumen Ejecutivo en Cajas */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-center">
+                  <span className="text-[10px] uppercase font-bold text-slate-500 block">Total Recaudado (Validado)</span>
+                  <span className="text-lg sm:text-2xl font-black text-emerald-800">
+                    Bs. {totalRecaudadoConfirmado.toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-center">
+                  <span className="text-[10px] uppercase font-bold text-slate-500 block">Pendiente de Aprobación</span>
+                  <span className="text-lg sm:text-2xl font-black text-amber-700">
+                    Bs. {totalPendienteValidacion.toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-center">
+                  <span className="text-[10px] uppercase font-bold text-slate-500 block">Total Pacientes / Citas</span>
+                  <span className="text-lg sm:text-2xl font-black text-slate-900">
+                    {periodAppointments.length}
+                  </span>
+                </div>
+              </div>
+
+              {/* Tabla Detallada de Consultas y Cobros */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                  Detalle de Pacientes, Especialidades y Pagos Registrados
+                </h4>
+
+                <table className="w-full text-left text-xs border border-slate-300">
+                  <thead className="bg-slate-100 border-b border-slate-300 text-slate-700 uppercase font-black text-[10px]">
+                    <tr>
+                      <th className="py-2 px-2.5 border-r border-slate-300">Ficha</th>
+                      <th className="py-2 px-2.5 border-r border-slate-300">Fecha / Hora</th>
+                      <th className="py-2 px-2.5 border-r border-slate-300">Paciente</th>
+                      <th className="py-2 px-2.5 border-r border-slate-300">Médico / Especialidad</th>
+                      <th className="py-2 px-2.5 border-r border-slate-300">Nº Comprobante QR</th>
+                      <th className="py-2 px-2.5 border-r border-slate-300">Estado</th>
+                      <th className="py-2 px-2.5 text-right">Monto (Bs)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {periodAppointments.map((app) => (
+                      <tr key={app.id} className="hover:bg-slate-50">
+                        <td className="py-2 px-2.5 font-bold border-r border-slate-200">{app.id}</td>
+                        <td className="py-2 px-2.5 border-r border-slate-200 whitespace-nowrap">{app.date} • {app.hour}</td>
+                        <td className="py-2 px-2.5 font-semibold border-r border-slate-200">
+                          {app.patientName}
+                          <span className="block text-[10px] text-slate-500">{app.patientPhone}</span>
+                        </td>
+                        <td className="py-2 px-2.5 border-r border-slate-200">
+                          <strong>{app.specialty}</strong>
+                          <span className="block text-[10px] text-slate-500">{app.doctor}</span>
+                        </td>
+                        <td className="py-2 px-2.5 border-r border-slate-200 font-mono text-[11px]">{app.voucherRef || 'N/A'}</td>
+                        <td className="py-2 px-2.5 border-r border-slate-200">
+                          <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${
+                            app.paymentStatus === 'Verificado y Aprobado'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {app.paymentStatus === 'Verificado y Aprobado' ? 'Aprobado' : 'Pendiente'}
+                          </span>
+                        </td>
+                        <td className="py-2 px-2.5 text-right font-black text-slate-900 whitespace-nowrap">
+                          Bs. {app.price || 150}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-slate-100 border-t-2 border-slate-400 font-black">
+                    <tr>
+                      <td colSpan={6} className="py-2.5 px-3 text-right uppercase text-slate-800">
+                        Total Liquidado en Caja ({financialPeriod === 'hoy' ? 'Hoy' : financialPeriod === 'semana' ? 'Semana' : 'Mes'}):
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-sm text-emerald-900">
+                        Bs. {totalRecaudadoConfirmado.toLocaleString()}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              {/* Desglose resumido por médico */}
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <span className="text-[10px] uppercase font-black text-slate-700 tracking-wider block">
+                  Resumen de Recaudación por Especialidad / Médico
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  {doctorBreakdown.map(d => (
+                    <div key={d.specId} className="bg-white p-2 rounded-lg border border-slate-200">
+                      <span className="font-bold text-slate-800 block text-[11px] truncate">{d.name}</span>
+                      <div className="flex justify-between items-center text-[10px] text-slate-500 mt-1">
+                        <span>{d.countTotal} citas</span>
+                        <strong className="text-emerald-800">Bs. {d.subtotal}</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bloque Inferior de Firmas de Auditoría / Cierre */}
+              <div className="pt-12 grid grid-cols-2 gap-10 text-center">
+                <div className="space-y-1">
+                  <div className="border-t border-slate-400 pt-2 w-3/4 mx-auto"></div>
+                  <p className="text-xs font-bold text-slate-900">Firma Encargado de Caja</p>
+                  <p className="text-[10px] text-slate-500">Administración y Tesorería • Clínica Velasco</p>
+                </div>
+                <div className="space-y-1">
+                  <div className="border-t border-slate-400 pt-2 w-3/4 mx-auto"></div>
+                  <p className="text-xs font-bold text-slate-900">Firma Gerencia / Dirección Médica</p>
+                  <p className="text-[10px] text-slate-500">Auditoría Médica y Financiera</p>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
         </div>
       )}
 
