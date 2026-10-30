@@ -635,8 +635,8 @@ export default function App() {
   const handleConfirmTurno = () => {
     if (!selectedSpecialtyForBooking || !userProfile) return;
 
-    if (!voucherNumber.trim() && !voucherFileName.trim()) {
-      setVoucherError('Es obligatorio ingresar el número de referencia del voucher o adjuntar el comprobante de transferencia.');
+    if (!voucherFileName.trim()) {
+      setVoucherError('Es obligatorio adjuntar la captura del comprobante o voucher de transferencia bancaria.');
       return;
     }
 
@@ -655,7 +655,7 @@ export default function App() {
       hour: selectedHour,
       patientName: userProfile.name,
       patientPhone: userProfile.phone,
-      voucherRef: voucherNumber.trim() || (voucherFileName ? `Archivo: ${voucherFileName}` : 'Voucher Adjunto'),
+      voucherRef: voucherFileName ? `Archivo: ${voucherFileName}` : 'Comprobante Adjuntado',
       paymentStatus: 'Pendiente de Verificación Admin',
       status: 'Programado'
     };
@@ -2982,39 +2982,18 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* Input de número de voucher o transacción */}
-                  <div className="space-y-1">
+                  {/* Zona de carga de comprobante / voucher obligatorio */}
+                  <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="block text-[11px] font-bold text-slate-700">
-                        Nº de Operación / Código de Transferencia:
+                      <label className="block text-[11px] font-extrabold text-slate-800">
+                        Adjuntar comprobante de pago (obligatorio):
                       </label>
-                      {voucherNumber.trim() && (
-                        <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
-                          <CheckCircle2 className="w-3 h-3" /> Registrado
+                      {voucherFileName && (
+                        <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Listo para enviar
                         </span>
                       )}
                     </div>
-                    <input
-                      type="text"
-                      value={voucherNumber}
-                      onChange={(e) => {
-                        setVoucherNumber(e.target.value);
-                        if (voucherError) setVoucherError('');
-                      }}
-                      placeholder="Ej. OP-984321 / Ref. 44521"
-                      className={`w-full px-3 py-2 bg-white rounded-xl border text-xs font-semibold focus:outline-none transition-all ${
-                        voucherNumber.trim() 
-                          ? 'border-clinic-emerald ring-2 ring-clinic-emerald/20 bg-emerald-50/20' 
-                          : 'border-slate-200 focus:ring-2 focus:ring-clinic-emerald'
-                      }`}
-                    />
-                  </div>
-
-                  {/* Zona de carga moderna (Dropzone-like) */}
-                  <div className="space-y-1">
-                    <label className="block text-[11px] font-bold text-slate-700">
-                      O adjuntar captura de la transferencia:
-                    </label>
                     <div>
                       <label className={`w-full flex items-center justify-between gap-2.5 p-2.5 rounded-xl border-2 border-dashed transition-all cursor-pointer ${
                         voucherFileName 
@@ -3089,9 +3068,9 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleConfirmTurno}
-                disabled={!voucherNumber.trim() && !voucherFileName.trim()}
+                disabled={!voucherFileName.trim()}
                 className={`w-full py-3.5 text-white font-extrabold text-sm sm:text-base rounded-2xl transition-all flex items-center justify-center gap-2 ${
-                  !voucherNumber.trim() && !voucherFileName.trim()
+                  !voucherFileName.trim()
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-80'
                     : 'bg-clinic-emerald hover:bg-clinic-emeraldHover shadow-emerald-glow active:scale-[0.98] cursor-pointer'
                 }`}
