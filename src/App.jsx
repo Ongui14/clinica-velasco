@@ -59,7 +59,8 @@ import {
   Wallet,
   TrendingUp,
   BarChart3,
-  CalendarRange
+  CalendarRange,
+  Video
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import VelascoLogo from './components/VelascoLogo';
@@ -72,6 +73,7 @@ const INITIAL_SPECIALTIES = [
     subRole: 'Cirugía General y Laparoscópica',
     doctor: 'Dr. Alejandro Velasco', 
     price: 150,
+    telemedicina: true,
     status: '🟢 Atendiendo Ahora', // '🟢 Atendiendo Ahora' | '🟡 En Cirugía / Pausa' | '🔴 Fuera de Turno'
     room: 'Consultorio 101 - PB',
     locationGuide: 'Planta Baja, Pasillo Derecho al lado de Farmacia Central',
@@ -84,6 +86,7 @@ const INITIAL_SPECIALTIES = [
     subRole: 'Pediatría Integral y Neonatología',
     doctor: 'Dra. Carmen Mendoza', 
     price: 180,
+    telemedicina: true,
     status: '🟢 Atendiendo Ahora',
     room: 'Consultorio 104 - PB',
     locationGuide: 'Planta Baja, Ala Materno-Infantil frente a Sala de Juegos',
@@ -96,6 +99,7 @@ const INITIAL_SPECIALTIES = [
     subRole: 'Neurocirugía y Columna',
     doctor: 'Dr. Mauricio Arce', 
     price: 250,
+    telemedicina: true,
     status: '🟡 En Cirugía / Pausa',
     room: 'Consultorio 202 - Piso 1',
     locationGuide: 'Piso 1, subiendo por ascensor principal a mano izquierda',
@@ -108,6 +112,7 @@ const INITIAL_SPECIALTIES = [
     subRole: 'Terapia Intensiva (UTI)',
     doctor: 'Dr. Fernando Suárez', 
     price: 300,
+    telemedicina: false, // Especialidad presencial hospitalaria
     status: '🟢 Atendiendo Ahora',
     room: 'Unidad UTI - Piso 1',
     locationGuide: 'Piso 1, Acceso Restringido UTI por pasillo central',
@@ -463,6 +468,12 @@ export default function App() {
   const [selectedDoctorId, setSelectedDoctorId] = useState('Dr. Alejandro Velasco');
 
   // Booking Modal State (Paso a Paso modal for chosen specialty)
+  // Modalidad elegida por el paciente: null (en menú bifurcación) | 'presencial' | 'telemedicina'
+  const [consultationMode, setConsultationMode] = useState('presencial');
+
+  // Paciente beneficiario (menor de edad o familiar para pediatría/terceros)
+  const [beneficiaryName, setBeneficiaryName] = useState('');
+
   const [selectedSpecialtyForBooking, setSelectedSpecialtyForBooking] = useState(null);
   const [selectedDateLabel, setSelectedDateLabel] = useState('Hoy');
   const [selectedHour, setSelectedHour] = useState('');
@@ -506,6 +517,9 @@ export default function App() {
       name: inputName.trim(),
       phone: inputPhone.trim()
     };
+    try {
+      localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(profile));
+    } catch (err) {}
     setUserProfile(profile);
   };
 
@@ -521,6 +535,7 @@ export default function App() {
     setSelectedSpecialtyForBooking(spec);
     setSelectedHour(spec.hours[0] || '10:00');
     setSelectedDateLabel('Hoy');
+    setBeneficiaryName('');
     setVoucherFileName('');
     setVoucherError('');
   };
@@ -640,18 +655,28 @@ export default function App() {
 
     setVoucherError('');
 
+    const patientDisplayName = beneficiaryName.trim()
+      ? `${userProfile.name} (Para: ${beneficiaryName.trim()})`
+      : userProfile.name;
+
     const newTicket = {
       id: `CV-${Math.floor(1000 + Math.random() * 9000)}`,
+      modality: consultationMode || 'presencial', // 'presencial' | 'telemedicina'
       specialty: selectedSpecialtyForBooking.name,
       subRole: selectedSpecialtyForBooking.subRole,
       doctor: selectedSpecialtyForBooking.doctor,
       price: selectedSpecialtyForBooking.price || qrConfig.amount || 150,
-      room: selectedSpecialtyForBooking.room,
-      locationGuide: selectedSpecialtyForBooking.locationGuide || 'Recepción Central',
+      room: (consultationMode === 'telemedicina')
+        ? 'Sala Virtual HD / Videoconsulta'
+        : selectedSpecialtyForBooking.room,
+      locationGuide: (consultationMode === 'telemedicina')
+        ? 'Atención por Videollamada Oficial (Recibirá enlace por WhatsApp al verificar)'
+        : (selectedSpecialtyForBooking.locationGuide || 'Recepción Central'),
       date: selectedDateLabel,
       dateISO: new Date().toISOString().slice(0, 10),
       hour: selectedHour,
-      patientName: userProfile.name,
+      patientName: patientDisplayName,
+      beneficiaryName: beneficiaryName.trim() || null,
       patientPhone: userProfile.phone,
       voucherRef: voucherFileName ? `Archivo: ${voucherFileName}` : 'Comprobante Adjuntado',
       paymentStatus: 'Pendiente de Verificación Admin',
@@ -1286,7 +1311,7 @@ export default function App() {
                     Hola, <span className="text-clinic-dark">{userProfile.name}</span>
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    ¿Qué atención médica necesitas hoy en Trinidad?
+                    ¿Qué modalidad de atención médica necesitas hoy?
                   </p>
                 </div>
 
@@ -1297,6 +1322,82 @@ export default function App() {
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Salir</span>
                 </button>
+              </div>
+
+              {/* BIFURCACIÓN DE INICIO: SELECTOR DE MODALIDAD (Presencial vs Telemedicina) */}
+              <div className="space-y-3">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-600 block">
+                  Selecciona la modalidad de tu consulta:
+                </span>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Botón 1: Consulta Presencial */}
+                  <div
+                    onClick={() => setConsultationMode('presencial')}
+                    className={`p-5 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-3 relative overflow-hidden group ${
+                      consultationMode === 'presencial'
+                        ? 'border-clinic-emerald bg-emerald-50/50 shadow-md ring-2 ring-clinic-emerald/20'
+                        : 'border-slate-200 bg-white hover:border-slate-300 shadow-soft-sm'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                        consultationMode === 'presencial' ? 'bg-clinic-emerald text-white' : 'bg-slate-100 text-slate-700 group-hover:bg-slate-200'
+                      }`}>
+                        <Building2 className="w-6 h-6" />
+                      </div>
+                      {consultationMode === 'presencial' && (
+                        <span className="text-[10px] font-black uppercase tracking-wider bg-clinic-emerald text-white px-2.5 py-0.5 rounded-full">
+                          Seleccionado
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-base sm:text-lg font-display font-extrabold text-slate-900 group-hover:text-clinic-dark transition-colors">
+                        🏥 Consulta Presencial
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                        Atención física en consultorios de la clínica (Av. Busch esq. Nicolás Suárez, Trinidad).
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Botón 2: Telemedicina / Videoconsulta */}
+                  <div
+                    onClick={() => setConsultationMode('telemedicina')}
+                    className={`p-5 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-3 relative overflow-hidden group ${
+                      consultationMode === 'telemedicina'
+                        ? 'border-teal-600 bg-teal-50/50 shadow-md ring-2 ring-teal-600/20'
+                        : 'border-slate-200 bg-white hover:border-slate-300 shadow-soft-sm'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                        consultationMode === 'telemedicina' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-teal-700 group-hover:bg-teal-100'
+                      }`}>
+                        <Video className="w-6 h-6" />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-black uppercase tracking-wider bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full">
+                          Online HD
+                        </span>
+                        {consultationMode === 'telemedicina' && (
+                          <span className="text-[10px] font-black uppercase tracking-wider bg-teal-600 text-white px-2 py-0.5 rounded-full">
+                            Activo
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-base sm:text-lg font-display font-extrabold text-slate-900 group-hover:text-teal-800 transition-colors">
+                        💻 Telemedicina / Videoconsulta
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                        Videollamada médica desde tu celular o computadora con nuestros especialistas certificados.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Botón / Tarjeta Destacada de Emergencia */}
@@ -1332,21 +1433,34 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Especialidades configuradas por el Admin */}
+              {/* Especialidades configuradas por el Admin (Filtradas por modalidad) */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-base sm:text-lg font-display font-extrabold text-slate-900">
-                      Agendar Consulta por Especialidad
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                        consultationMode === 'telemedicina' ? 'bg-teal-100 text-teal-800' : 'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        {consultationMode === 'telemedicina' ? 'Modalidad: Videoconsulta Online' : 'Modalidad: Consulta Presencial'}
+                      </span>
+                    </div>
+                    <h3 className="text-base sm:text-lg font-display font-extrabold text-slate-900 mt-1">
+                      {consultationMode === 'telemedicina'
+                        ? 'Especialistas Disponibles en Telemedicina'
+                        : 'Agendar Consulta Presencial en Clínica'}
                     </h3>
                     <p className="text-xs text-slate-500">
-                      Selecciona un área médica para ver consultorio y turnos disponibles
+                      {consultationMode === 'telemedicina'
+                        ? 'Médicos certificados que realizan atención y recetas por videollamada'
+                        : 'Selecciona un área médica para ver consultorio y turnos disponibles'}
                     </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-                  {specialtiesList.map((spec) => (
+                  {specialtiesList
+                    .filter(spec => consultationMode === 'telemedicina' ? (spec.telemedicina !== false) : true)
+                    .map((spec) => (
                     <div
                       key={spec.id}
                       onClick={() => handleOpenSpecialtyBooking(spec)}
@@ -2783,9 +2897,16 @@ export default function App() {
                   CV
                 </div>
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-clinic-emerald bg-emerald-50 px-2 py-0.5 rounded-full inline-block">
-                    Agendamiento de Cita
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-clinic-emerald bg-emerald-50 px-2 py-0.5 rounded-full inline-block">
+                      Agendamiento de Cita
+                    </span>
+                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full inline-block ${
+                      consultationMode === 'telemedicina' ? 'bg-teal-100 text-teal-800' : 'bg-slate-100 text-slate-700'
+                    }`}>
+                      {consultationMode === 'telemedicina' ? '📹 Videoconsulta' : '🏥 Presencial'}
+                    </span>
+                  </div>
                   <h3 className="text-base sm:text-lg font-display font-extrabold text-slate-900 leading-tight">
                     {selectedSpecialtyForBooking.name}
                   </h3>
@@ -2805,12 +2926,33 @@ export default function App() {
             {/* CUERPO CON SCROLL INTERNO Y 2 COLUMNAS EN ESCRITORIO (md:grid-cols-2) */}
             <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4">
               
-              {/* Indicador de paciente registrado */}
-              <div className="text-xs text-slate-600 font-semibold bg-emerald-50/70 p-3 rounded-2xl border border-emerald-100 flex items-center justify-between">
-                <span className="text-slate-500">Agendando para:</span>
-                <span className="font-extrabold text-clinic-dark">
-                  {userProfile.name} <span className="text-slate-500 font-normal">({userProfile.phone})</span>
-                </span>
+              {/* Indicador de paciente titular registrado */}
+              <div className="bg-emerald-50/70 p-3.5 rounded-2xl border border-emerald-100 space-y-2.5">
+                <div className="text-xs text-slate-600 font-semibold flex items-center justify-between">
+                  <span className="text-slate-500">Titular de la cuenta:</span>
+                  <span className="font-extrabold text-clinic-dark">
+                    {userProfile.name} <span className="text-slate-500 font-normal">({userProfile.phone})</span>
+                  </span>
+                </div>
+
+                {/* Campo opcional para Pediatría, menores de edad o familiares */}
+                <div className="pt-2 border-t border-emerald-200/60">
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    👶 ¿La consulta es para otra persona o un menor? Escribe su nombre aquí (Opcional):
+                  </label>
+                  <input
+                    type="text"
+                    value={beneficiaryName}
+                    onChange={(e) => setBeneficiaryName(e.target.value)}
+                    placeholder="Ej. Mateo Vaca (Hijo / Menor de edad)"
+                    className="w-full px-3 py-2 bg-white rounded-xl border border-emerald-200 text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-clinic-emerald"
+                  />
+                  {beneficiaryName.trim() && (
+                    <span className="text-[10px] text-clinic-emerald font-bold block mt-1">
+                      ✓ La cita y la ficha médica se emitirán a nombre de: {beneficiaryName.trim()}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Grid 2 Columnas para laptop/PC y 1 columna en móvil */}
