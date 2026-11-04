@@ -64,6 +64,7 @@ import {
   Loader2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import jsPDF from 'jspdf';
 import VelascoLogo from './components/VelascoLogo';
 
 // Initial Specialties with room, status, location guidance and available hours
@@ -495,6 +496,7 @@ export default function App() {
   // Estado para la sala de Videoconsulta / Jitsi y Pantalla de Espera
   const [activeVideoCall, setActiveVideoCall] = useState(null);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [doctorPrescriptionText, setDoctorPrescriptionText] = useState('');
 
   // Admin Panel Editing State
   const [editingSpecialtyId, setEditingSpecialtyId] = useState(null);
@@ -967,12 +969,174 @@ export default function App() {
     }));
   };
 
+  // Función para generar y descargar la Receta Médica en PDF con jsPDF
+  const handleGeneratePrescriptionPDF = (ticket) => {
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const todayStr = new Date().toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      });
+
+      // Encabezado institucional - Franja superior verde esmeralda
+      doc.setFillColor(4, 106, 40); // #046A28
+      doc.rect(0, 0, 210, 26, 'F');
+
+      // Título en la franja
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.text('CLÍNICA VELASCO', 20, 14);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text('TELEMEDICINA Y CENTRO MÉDICO DE ALTA COMPLEJIDAD • TRINIDAD, BENI', 20, 20);
+
+      // Eslogan oficial
+      doc.setTextColor(51, 65, 85);
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(11);
+      doc.text('“Tu salud nuestra prioridad”', 105, 34, { align: 'center' });
+
+      // Línea divisoria elegante
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.5);
+      doc.line(20, 38, 190, 38);
+
+      // Membrete / Datos del documento
+      doc.setTextColor(15, 23, 42);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.text('RECETA MÉDICA DIGITAL Y PRESCRIPCIÓN', 20, 47);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Ficha / Consulta: ${ticket.id}`, 190, 47, { align: 'right' });
+      doc.text(`Fecha de Emisión: ${todayStr}`, 190, 52, { align: 'right' });
+
+      // Recuadro de información del paciente y médico tratante
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(20, 56, 170, 32, 3, 3, 'FD');
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text('DATOS DEL PACIENTE:', 25, 63);
+      doc.text('MÉDICO TRATANTE:', 110, 63);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(51, 65, 85);
+      
+      const patientFull = ticket.beneficiaryName 
+        ? `${ticket.patientName} (Menor / Beneficiario)` 
+        : ticket.patientName;
+
+      doc.text(`Nombre: ${patientFull}`, 25, 69);
+      doc.text(`Teléfono: ${ticket.patientPhone || 'No registrado'}`, 25, 75);
+      doc.text(`Modalidad: Videoconsulta Oficial`, 25, 81);
+
+      doc.text(`Doctor: ${ticket.doctor}`, 110, 69);
+      doc.text(`Especialidad: ${ticket.specialty}`, 110, 75);
+      doc.text(`Sede: Trinidad, Beni - Bolivia`, 110, 81);
+
+      // Sección Rp / Prescripción médica
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(4, 106, 40);
+      doc.text('Rp / PRESCRIPCIÓN MÉDICA E INDICACIONES:', 20, 98);
+
+      // Marco contenedor para el cuerpo de la receta
+      doc.setDrawColor(4, 106, 40);
+      doc.setLineWidth(0.4);
+      doc.rect(20, 102, 170, 115);
+
+      // Contenido de la prescripción
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      
+      const prescriptionText = ticket.prescriptionText || 
+        '1. Medicación preventiva e hidratación según tolerancia.\n2. Reposo relativo por 48 horas.\n3. Control y reevaluación si persisten síntomas.\n\n*Prescripción emitida por el profesional médico tratante a través del servicio oficial de Telemedicina de Clínica Velasco.*';
+
+      const splitText = doc.splitTextToSize(prescriptionText, 160);
+      doc.text(splitText, 25, 111);
+
+      // Pie de página con espacio para firma y sello del doctor
+      const footerY = 245;
+
+      // Línea de firma
+      doc.setDrawColor(100, 116, 139);
+      doc.setLineWidth(0.5);
+      doc.line(110, footerY, 180, footerY);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text(`Dr. / Dra. ${ticket.doctor}`, 145, footerY + 5, { align: 'center' });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`${ticket.specialty} • Reg. Colegio Médico Beni`, 145, footerY + 9, { align: 'center' });
+      doc.text('Firma y Sello Digital Verificado', 145, footerY + 13, { align: 'center' });
+
+      // Aviso legal inferior
+      doc.setFontSize(7.5);
+      doc.setTextColor(148, 163, 184);
+      doc.text('Clínica Velasco • Av. Busch esq. Nicolás Suárez, Trinidad, Beni - Bolivia • Emergencias 24h: (+591) 69400096', 105, 280, { align: 'center' });
+      doc.text('Este documento es una receta médica digital oficial emitida conforme a normativas de Telemedicina.', 105, 284, { align: 'center' });
+
+      // Guardar y descargar automáticamente
+      const fileName = `Receta-Clinica-Velasco-${ticket.id}.pdf`;
+      doc.save(fileName);
+    } catch (error) {
+      console.error('Error al generar la receta PDF:', error);
+      alert('Ocurrió un error al generar la receta en PDF. Por favor intenta de nuevo.');
+    }
+  };
+
+  // Función del Médico para emitir la receta y finalizar la consulta
+  const handleDoctorEmitPrescription = (ticketId) => {
+    if (!doctorPrescriptionText.trim()) {
+      alert('Por favor redacta la prescripción médica o las indicaciones antes de emitir la receta.');
+      return;
+    }
+
+    setAppointments(prev => prev.map(app => {
+      if (app.id === ticketId) {
+        return {
+          ...app,
+          prescriptionText: doctorPrescriptionText.trim(),
+          prescriptionDate: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }),
+          status: 'Atendido'
+        };
+      }
+      return app;
+    }));
+
+    // Cerrar la videoconsulta si estaba abierta
+    setActiveVideoCall(null);
+    setIsVideoLoaded(false);
+    setDoctorPrescriptionText('');
+
+    alert('¡Receta médica emitida exitosamente! La consulta ha sido finalizada y el paciente ya tiene disponible la descarga de su receta.');
+  };
+
   // Filter appointments for Doctor Panel
   const doctorAppointments = appointments.filter(a => a.doctor === selectedDoctorId);
 
-  // Turnos activos para el Paciente: excluye automáticamente las citas con estado 'Atendido' o 'Atendida'
+  // Turnos para el Paciente: muestra turnos pendientes o aquellos ya atendidos que cuentan con Receta Médica emitida para descargar
   const activePatientAppointments = appointments.filter(app => {
     const s = (app.status || '').toLowerCase().trim();
+    if (app.prescriptionText) return true; // Citas con receta disponible para descarga
     return s !== 'atendido' && s !== 'atendida';
   });
 
@@ -1844,17 +2008,29 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Botón de Ingreso a Videoconsulta interactivo con Pantalla de Espera Corporativa */}
+                        {/* Botón de Videoconsulta o Descarga de Receta Médica */}
                         <div>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenVideoCall(ticket)}
-                            className="w-full py-3 px-4 rounded-2xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-teal-900/20 transition-all cursor-pointer group"
-                            title="Haz clic para ingresar a la sala de videoconsulta médica"
-                          >
-                            <Video className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                            <span>📹 Ingresar a Videoconsulta en Vivo</span>
-                          </button>
+                          {ticket.prescriptionText ? (
+                            <button
+                              type="button"
+                              onClick={() => handleGeneratePrescriptionPDF(ticket)}
+                              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/20 transition-all cursor-pointer group"
+                              title="Descargar Receta Médica oficial en formato PDF"
+                            >
+                              <FileText className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                              <span>📄 Descargar Receta Médica (PDF)</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenVideoCall(ticket)}
+                              className="w-full py-3 px-4 rounded-2xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-teal-900/20 transition-all cursor-pointer group"
+                              title="Haz clic para ingresar a la sala de videoconsulta médica"
+                            >
+                              <Video className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                              <span>📹 Ingresar a Videoconsulta en Vivo</span>
+                            </button>
+                          )}
                         </div>
 
                         {/* Estado del turno en vivo */}
@@ -2633,12 +2809,15 @@ export default function App() {
                     {/* Botones de acción médica */}
                     <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2">
                       <button
-                        onClick={() => handleDoctorCallPatient(app.id, app.room)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
-                        title="Llama al paciente para que ingrese a consulta"
+                        onClick={() => {
+                          handleDoctorCallPatient(app.id, 'Sala Virtual Segura');
+                          handleOpenVideoCall(app);
+                        }}
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl transition-all cursor-pointer shadow-sm"
+                        title="Entrar a la videoconsulta y redactar receta médica"
                       >
-                        <Megaphone className="w-3.5 h-3.5" />
-                        <span>📢 Llamar a Puerta</span>
+                        <Video className="w-3.5 h-3.5" />
+                        <span>📹 Iniciar Videoconsulta</span>
                       </button>
 
                       <button
@@ -2650,14 +2829,25 @@ export default function App() {
                         <span>Historial Clínico</span>
                       </button>
 
-                      <button
-                        onClick={() => handleDoctorMarkAttended(app.id)}
-                        className="inline-flex items-center justify-center gap-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
-                        title="Marca la consulta como finalizada"
-                      >
-                        <UserCheck className="w-3.5 h-3.5" />
-                        <span>✅ Atendido</span>
-                      </button>
+                      {app.prescriptionText ? (
+                        <button
+                          onClick={() => handleGeneratePrescriptionPDF(app)}
+                          className="inline-flex items-center justify-center gap-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
+                          title="Descargar o ver la receta emitida"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Ver Receta PDF</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleDoctorMarkAttended(app.id)}
+                          className="inline-flex items-center justify-center gap-1 py-2 px-3 bg-slate-600 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
+                          title="Marca la consulta como finalizada"
+                        >
+                          <UserCheck className="w-3.5 h-3.5" />
+                          <span>✅ Atendido</span>
+                        </button>
+                      )}
 
                       <button
                         onClick={() => {
@@ -3507,71 +3697,136 @@ export default function App() {
               </div>
             </div>
 
-            {/* Contenedor del Video / Iframe y Loading Screen */}
-            <div className="relative flex-1 w-full h-full bg-slate-950 overflow-hidden">
+            {/* Contenedor Principal (Pantalla dividida en modo médico / pantalla completa en modo paciente) */}
+            <div className="relative flex-1 w-full h-full bg-slate-950 overflow-hidden flex flex-col lg:flex-row">
               
-              {/* PANTALLA DE ESPERA CORPORATIVA PERSONALIZADA (Visible mientras isVideoLoaded sea false) */}
-              {!isVideoLoaded && (
-                <div className="absolute inset-0 z-50 bg-white flex flex-col items-center justify-center p-6 text-center animate-fade-in transition-opacity duration-500">
-                  
-                  {/* Contenedor central elegante */}
-                  <div className="max-w-md w-full mx-auto space-y-6 flex flex-col items-center">
+              {/* Columna Izquierda: Video / Iframe y Loading Screen */}
+              <div className="relative flex-1 w-full h-full bg-slate-950 overflow-hidden">
+                
+                {/* PANTALLA DE ESPERA CORPORATIVA PERSONALIZADA (Visible mientras isVideoLoaded sea false) */}
+                {!isVideoLoaded && (
+                  <div className="absolute inset-0 z-50 bg-white flex flex-col items-center justify-center p-6 text-center animate-fade-in transition-opacity duration-500">
                     
-                    {/* Isotipo de la Clínica: Círculo verde con iniciales CV y Cruz médica */}
-                    <div className="relative">
-                      {/* Aura pulsante suave */}
-                      <div className="absolute -inset-3 bg-emerald-100 rounded-full blur-md opacity-75 animate-pulse"></div>
+                    {/* Contenedor central elegante */}
+                    <div className="max-w-md w-full mx-auto space-y-6 flex flex-col items-center">
                       
-                      <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-clinic-dark via-emerald-700 to-teal-500 text-white flex flex-col items-center justify-center shadow-xl border-4 border-white">
-                        <div className="flex items-center justify-center font-display font-black text-2xl sm:text-3xl tracking-tight leading-none">
-                          CV
-                        </div>
-                        <div className="flex items-center gap-0.5 mt-1">
-                          <Activity className="w-3.5 h-3.5 text-emerald-300" />
-                          <span className="text-[9px] font-black tracking-widest uppercase text-emerald-100">Velasco</span>
+                      {/* Isotipo de la Clínica: Círculo verde con iniciales CV y Cruz médica */}
+                      <div className="relative">
+                        {/* Aura pulsante suave */}
+                        <div className="absolute -inset-3 bg-emerald-100 rounded-full blur-md opacity-75 animate-pulse"></div>
+                        
+                        <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-clinic-dark via-emerald-700 to-teal-500 text-white flex flex-col items-center justify-center shadow-xl border-4 border-white">
+                          <div className="flex items-center justify-center font-display font-black text-2xl sm:text-3xl tracking-tight leading-none">
+                            CV
+                          </div>
+                          <div className="flex items-center gap-0.5 mt-1">
+                            <Activity className="w-3.5 h-3.5 text-emerald-300" />
+                            <span className="text-[9px] font-black tracking-widest uppercase text-emerald-100">Velasco</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Texto institucional y de carga animado */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-center gap-2">
-                        <Loader2 className="w-4 h-4 text-clinic-emerald animate-spin" />
-                        <span className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider animate-pulse">
-                          Conectando con la Sala Virtual...
+                      {/* Texto institucional y de carga animado */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="w-4 h-4 text-clinic-emerald animate-spin" />
+                          <span className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider animate-pulse">
+                            Conectando con la Sala Virtual...
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                          Iniciando videoconsulta con <strong className="text-slate-800">{activeVideoCall.doctor}</strong> ({activeVideoCall.specialty}).
+                        </p>
+                      </div>
+
+                      {/* Línea divisoria decorativa sutil */}
+                      <div className="w-16 h-0.5 bg-emerald-200 rounded-full"></div>
+
+                      {/* Eslogan exacto con tipografía elegante y color gris oscuro */}
+                      <div className="pt-2">
+                        <p className="text-base sm:text-lg font-serif italic font-medium text-slate-700 tracking-wide select-none">
+                          “Tu salud nuestra prioridad”
+                        </p>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mt-1">
+                          Clínica Velasco • Trinidad, Beni
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                        Iniciando videoconsulta con <strong className="text-slate-800">{activeVideoCall.doctor}</strong> ({activeVideoCall.specialty}).
-                      </p>
-                    </div>
 
-                    {/* Línea divisoria decorativa sutil */}
-                    <div className="w-16 h-0.5 bg-emerald-200 rounded-full"></div>
-
-                    {/* Eslogan exacto con tipografía elegante y color gris oscuro */}
-                    <div className="pt-2">
-                      <p className="text-base sm:text-lg font-serif italic font-medium text-slate-700 tracking-wide select-none">
-                        “Tu salud nuestra prioridad”
-                      </p>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mt-1">
-                        Clínica Velasco • Trinidad, Beni
-                      </span>
                     </div>
 
                   </div>
+                )}
 
+                {/* Iframe oficial de Jitsi Meet embebido */}
+                <iframe
+                  title="Sala de Videoconsulta Jitsi"
+                  src={`https://meet.jit.si/ClinicaVelasco-${activeVideoCall.id}#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false`}
+                  allow="camera; microphone; fullscreen; display-capture; autoplay"
+                  onLoad={() => setIsVideoLoaded(true)}
+                  className="w-full h-full border-0"
+                />
+
+              </div>
+
+              {/* Columna Derecha del Médico: Módulo de Prescripción Médica y Emisión en Vivo */}
+              {systemRole === 'medico' && (
+                <div className="w-full lg:w-96 bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-800 p-4 sm:p-5 flex flex-col justify-between shrink-0 overflow-y-auto space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-emerald-400" />
+                        <h4 className="text-xs sm:text-sm font-black text-white uppercase tracking-wider">
+                          Prescripción Médica
+                        </h4>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800/80 px-2 py-0.5 rounded-full">
+                        Emisión Digital
+                      </span>
+                    </div>
+
+                    <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 space-y-1 text-xs">
+                      <div className="flex justify-between text-slate-400">
+                        <span>Paciente:</span>
+                        <strong className="text-white">{activeVideoCall.patientName}</strong>
+                      </div>
+                      <div className="flex justify-between text-slate-400">
+                        <span>Ficha:</span>
+                        <span className="text-emerald-400 font-mono font-bold">{activeVideoCall.id}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-bold text-slate-300">
+                        Medicamentos, Dosis e Indicaciones para el Paciente:
+                      </label>
+                      <textarea
+                        rows={8}
+                        value={doctorPrescriptionText}
+                        onChange={(e) => setDoctorPrescriptionText(e.target.value)}
+                        placeholder="1. Paracetamol 500mg - 1 comprimido cada 8 horas por 3 días.\n2. Ibuprofeno 400mg si hay dolor agudo.\n3. Reposo e hidratación abundante."
+                        className="w-full p-3 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono resize-none leading-relaxed"
+                      />
+                      <span className="text-[10px] text-slate-400 block">
+                        Al emitir, se generará el documento PDF oficial con membrete y firma.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => handleDoctorEmitPrescription(activeVideoCall.id)}
+                      className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-[0.99] text-white font-black text-xs sm:text-sm rounded-2xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Emitir y Finalizar Consulta</span>
+                    </button>
+                    <p className="text-[10px] text-slate-400 text-center">
+                      Guarda la receta en el expediente y habilita la descarga inmediata al paciente.
+                    </p>
+                  </div>
                 </div>
               )}
-
-              {/* Iframe oficial de Jitsi Meet embebido */}
-              <iframe
-                title="Sala de Videoconsulta Jitsi"
-                src={`https://meet.jit.si/ClinicaVelasco-${activeVideoCall.id}#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false`}
-                allow="camera; microphone; fullscreen; display-capture; autoplay"
-                onLoad={() => setIsVideoLoaded(true)}
-                className="w-full h-full border-0"
-              />
 
             </div>
 
