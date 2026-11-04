@@ -988,15 +988,24 @@ export default function App() {
       doc.setFillColor(4, 106, 40); // #046A28
       doc.rect(0, 0, 210, 26, 'F');
 
+      // 1. Isotipo Oficial de Clínica Velasco en la esquina superior (Círculo blanco con iniciales "CV" en verde)
+      doc.setFillColor(255, 255, 255);
+      doc.circle(20, 13, 8, 'F');
+      
+      doc.setTextColor(4, 106, 40);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('CV', 20, 16.5, { align: 'center' });
+
       // Título en la franja
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(18);
-      doc.text('CLÍNICA VELASCO', 20, 14);
+      doc.setFontSize(17);
+      doc.text('CLÍNICA VELASCO', 33, 14);
 
-      doc.setFontSize(9);
+      doc.setFontSize(8.5);
       doc.setFont('helvetica', 'normal');
-      doc.text('TELEMEDICINA Y CENTRO MÉDICO DE ALTA COMPLEJIDAD • TRINIDAD, BENI', 20, 20);
+      doc.text('TELEMEDICINA Y CENTRO MÉDICO DE ALTA COMPLEJIDAD • TRINIDAD, BENI', 33, 20);
 
       // Eslogan oficial
       doc.setTextColor(51, 65, 85);
@@ -1070,7 +1079,19 @@ export default function App() {
       doc.text(splitText, 25, 111);
 
       // Pie de página con espacio para firma y sello del doctor
-      const footerY = 245;
+      const footerY = 248;
+
+      // 2. Firma Digital Simulada en estilo cursivo/manuscrito centrada justo por encima de la línea
+      doc.setTextColor(15, 76, 129); // Azul tinta médica formal #0F4C81
+      doc.setFont('times', 'bolditalic');
+      doc.setFontSize(17);
+      doc.text(`${ticket.doctor}`, 145, footerY - 5, { align: 'center' });
+
+      // Sello digital distintivo en verde
+      doc.setTextColor(4, 106, 40);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.text('VALIDADO POR SESIÓN MÉDICA SEGURA', 145, footerY - 1, { align: 'center' });
 
       // Línea de firma
       doc.setDrawColor(100, 116, 139);
@@ -1086,12 +1107,12 @@ export default function App() {
       doc.setFontSize(8);
       doc.setTextColor(100, 116, 139);
       doc.text(`${ticket.specialty} • Reg. Colegio Médico Beni`, 145, footerY + 9, { align: 'center' });
-      doc.text('Firma y Sello Digital Verificado', 145, footerY + 13, { align: 'center' });
+      doc.text('Firma y Sello Digital Verificado • Telemedicina', 145, footerY + 13, { align: 'center' });
 
       // Aviso legal inferior
       doc.setFontSize(7.5);
       doc.setTextColor(148, 163, 184);
-      doc.text('Clínica Velasco • Av. Busch esq. Nicolás Suárez, Trinidad, Beni - Bolivia • Emergencias 24h: (+591) 69400096', 105, 280, { align: 'center' });
+      doc.text('Clínica Velasco • Av. Busch esq. Nicolás Suárez, Trinidad, Beni - Bolivia • Central: (+591) 69400096', 105, 280, { align: 'center' });
       doc.text('Este documento es una receta médica digital oficial emitida conforme a normativas de Telemedicina.', 105, 284, { align: 'center' });
 
       // Guardar y descargar automáticamente
@@ -1495,38 +1516,7 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Botón / Tarjeta Destacada de Emergencia */}
-              <div 
-                onClick={() => { setActiveTab('emergencia'); setEmergencySubMode(null); }}
-                className="group bg-gradient-to-r from-red-600 via-red-700 to-rose-700 rounded-3xl p-6 sm:p-7 text-white shadow-lg hover:shadow-red-600/30 transition-all duration-300 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-red-500 active:scale-[0.99]"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Siren className="w-8 h-8 text-white animate-pulse" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2.5 py-0.5 rounded-full inline-block">
-                        Guardia Activa 24/7
-                      </span>
-                      <span className="text-[10px] font-bold text-emerald-300 bg-black/20 px-2 py-0.5 rounded-full">
-                        {ambulanceStatus === 'disponible' ? '🟢 Ambulancia en Base' : '🔴 Ambulancia en Operativo'}
-                      </span>
-                    </div>
-                    <h3 className="text-xl sm:text-2xl font-display font-black leading-tight">
-                      🚨 EMERGENCIA 24 HORAS
-                    </h3>
-                    <p className="text-xs sm:text-sm text-red-100 font-medium mt-0.5">
-                      Ambulancia UTI a domicilio o pre-aviso de llegada inmediata a guardia.
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-2 self-end sm:self-center bg-white text-red-600 px-4 py-2.5 rounded-2xl font-black text-xs sm:text-sm shadow-sm group-hover:bg-red-50 transition-colors">
-                  <span>Ingresar</span>
-                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </div>
 
               {/* Especialistas en Línea para Teleconsulta */}
               <div className="space-y-4">
@@ -2820,14 +2810,7 @@ export default function App() {
                         <span>📹 Iniciar Videoconsulta</span>
                       </button>
 
-                      <button
-                        onClick={() => handleOpenPatientHistory(app)}
-                        className="inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-clinic-light hover:bg-emerald-100 text-clinic-dark font-extrabold text-xs rounded-xl transition-all cursor-pointer border border-clinic-emerald/30 shadow-sm"
-                        title="Ver antecedentes clínicos e interconsultas del paciente"
-                      >
-                        <History className="w-3.5 h-3.5 text-clinic-emerald" />
-                        <span>Historial Clínico</span>
-                      </button>
+
 
                       {app.prescriptionText ? (
                         <button
@@ -3412,170 +3395,6 @@ export default function App() {
 
 
       {/* ========================================================
-          MODAL HISTORIAL CLÍNICO UNIFICADO (INTERCONSULTA)
-         ======================================================== */}
-      {activeHistoryPatient && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-5 animate-fade-in overflow-y-auto">
-          <div className="w-full max-w-2xl bg-white rounded-3xl p-5 sm:p-7 shadow-2xl border border-slate-200 space-y-5 animate-slide-up my-auto max-h-[92vh] overflow-y-auto">
-            
-            {/* Header del Historial */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-clinic-dark text-white flex items-center justify-center">
-                  <ClipboardList className="w-5 h-5 text-emerald-400" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-clinic-emerald bg-emerald-50 px-2.5 py-0.5 rounded-full inline-block">
-                    Expediente Digital Unificado • Interconsulta
-                  </span>
-                  <h3 className="text-lg sm:text-xl font-display font-extrabold text-slate-900 mt-0.5">
-                    Historial Clínico: {activeHistoryPatient.patientName}
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Tel: {activeHistoryPatient.patientPhone} • Registro médico compartido en Clínica Velasco
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setActiveHistoryPatient(null)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {historySavedNotification && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-900 font-bold flex items-center gap-2 animate-fade-in">
-                <CheckCircle2 className="w-4 h-4 text-clinic-emerald shrink-0" />
-                <span>{historySavedNotification}</span>
-              </div>
-            )}
-
-            {/* Línea de tiempo de visitas previas */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <History className="w-4 h-4 text-clinic-emerald" />
-                  Evolución y Atenciones Anteriores ({
-                    medicalHistory.filter(h => h.patientName === activeHistoryPatient.patientName || h.patientPhone === activeHistoryPatient.patientPhone).length
-                  })
-                </h4>
-                <span className="text-[10px] text-slate-400 font-semibold">Más recientes primero</span>
-              </div>
-
-              <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                {medicalHistory.filter(h => h.patientName === activeHistoryPatient.patientName || h.patientPhone === activeHistoryPatient.patientPhone).length === 0 ? (
-                  <p className="text-xs text-slate-400 p-4 bg-slate-50 rounded-2xl text-center">
-                    Este paciente no cuenta con registros históricos previos en el sistema.
-                  </p>
-                ) : (
-                  medicalHistory
-                    .filter(h => h.patientName === activeHistoryPatient.patientName || h.patientPhone === activeHistoryPatient.patientPhone)
-                    .map((item) => (
-                      <div 
-                        key={item.id} 
-                        className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2 hover:bg-slate-50 transition-colors"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs">
-                          <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-clinic-dark bg-clinic-light px-2.5 py-0.5 rounded-lg text-[11px]">
-                              {item.specialty}
-                            </span>
-                            <span className="font-bold text-slate-800">{item.doctor}</span>
-                          </div>
-                          <span className="text-[11px] text-slate-400 font-medium">
-                            📅 {item.date} {item.time ? `• ${item.time}` : ''}
-                          </span>
-                        </div>
-
-                        <div className="text-xs space-y-1.5 pt-1">
-                          <div>
-                            <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">
-                              Diagnóstico / Motivo:
-                            </span>
-                            <p className="text-slate-800 font-medium leading-relaxed">
-                              {item.diagnosis}
-                            </p>
-                          </div>
-
-                          {item.referralNotes && (
-                            <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/70 text-amber-950">
-                              <span className="font-bold block text-[10px] uppercase tracking-wider text-amber-800">
-                                🧭 Notas de Derivación / Interconsulta:
-                              </span>
-                              <p className="text-[11px] font-medium leading-relaxed mt-0.5">
-                                {item.referralNotes}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                )}
-              </div>
-            </div>
-
-            {/* Formulario para agregar nueva evolución médica actual */}
-            <form onSubmit={handleSaveMedicalHistoryEntry} className="p-4 sm:p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-3.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-clinic-dark flex items-center gap-1.5">
-                  <Edit3 className="w-4 h-4 text-clinic-emerald" />
-                  Nueva Entrada Médica ({selectedDoctorId})
-                </span>
-                <span className="text-[10px] text-slate-500 font-semibold">Consulta en curso</span>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[11px] font-bold text-slate-700">
-                  Diagnóstico / Evolución Clínica:
-                </label>
-                <textarea
-                  rows={2}
-                  required
-                  value={newDiagnosis}
-                  onChange={(e) => setNewDiagnosis(e.target.value)}
-                  placeholder="Describa el diagnóstico, hallazgos clínicos y tratamiento indicado..."
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-clinic-emerald resize-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[11px] font-bold text-slate-700">
-                  Derivación / Observaciones para otro especialista:
-                </label>
-                <input
-                  type="text"
-                  value={newReferralNotes}
-                  onChange={(e) => setNewReferralNotes(e.target.value)}
-                  placeholder="Ej. Derivar a Cardiología para ecocardiograma o control quirúrgico en 7 días..."
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-clinic-emerald"
-                />
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1">
-                <p className="text-[10px] text-slate-500">
-                  Al guardar, se añade al historial unificado y se marca la consulta como atendida.
-                </p>
-                <button
-                  type="submit"
-                  disabled={!newDiagnosis.trim()}
-                  className={`w-full sm:w-auto px-5 py-2.5 rounded-xl font-bold text-xs text-white transition-all shadow-sm flex items-center justify-center gap-1.5 ${
-                    newDiagnosis.trim()
-                      ? 'bg-clinic-emerald hover:bg-clinic-emeraldHover cursor-pointer shadow-emerald-glow'
-                      : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                  }`}
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Guardar Evolución</span>
-                </button>
-              </div>
-            </form>
-
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================
           BARRA DE NAVEGACIÓN INFERIOR FIJA (VISTA PACIENTE)
          ======================================================== */}
       {systemRole === 'paciente' && userProfile && (
@@ -3623,24 +3442,7 @@ export default function App() {
               )}
             </button>
 
-            {/* Tab 3: Emergencia */}
-            <button
-              type="button"
-              onClick={() => { setActiveTab('emergencia'); setEmergencySubMode(null); setPreAlertSuccess(false); }}
-              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${
-                activeTab === 'emergencia'
-                  ? 'text-clinic-red font-extrabold scale-105'
-                  : 'text-slate-400 hover:text-slate-600 font-semibold'
-              }`}
-            >
-              <div className={`p-1 rounded-xl transition-colors ${activeTab === 'emergencia' ? 'bg-red-50 text-clinic-red' : ''}`}>
-                <Siren className={`w-5 h-5 ${activeTab === 'emergencia' ? 'animate-pulse text-clinic-red' : ''}`} />
-              </div>
-              <span className="text-[10px] sm:text-[11px] leading-none">Emergencia SOS</span>
-              {activeTab === 'emergencia' && (
-                <span className="w-1.5 h-1.5 rounded-full bg-clinic-red mt-0.5" />
-              )}
-            </button>
+
 
           </nav>
         </div>
