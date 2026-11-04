@@ -60,7 +60,8 @@ import {
   TrendingUp,
   BarChart3,
   CalendarRange,
-  Video
+  Video,
+  Loader2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import VelascoLogo from './components/VelascoLogo';
@@ -491,6 +492,10 @@ export default function App() {
   const [showPrintReportModal, setShowPrintReportModal] = useState(false);
   const [selectedTicketForPrint, setSelectedTicketForPrint] = useState(null);
 
+  // Estado para la sala de Videoconsulta / Jitsi y Pantalla de Espera
+  const [activeVideoCall, setActiveVideoCall] = useState(null);
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+
   // Admin Panel Editing State
   const [editingSpecialtyId, setEditingSpecialtyId] = useState(null);
   const [newHourInput, setNewHourInput] = useState('');
@@ -637,6 +642,12 @@ export default function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Abrir sala de Videoconsulta para el paciente
+  const handleOpenVideoCall = (ticket) => {
+    setIsVideoLoaded(false);
+    setActiveVideoCall(ticket);
   };
 
   // Confirm Appointment Booking (Patient)
@@ -1833,16 +1844,16 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Botón de Ingreso a Videoconsulta preparado para futura integración */}
+                        {/* Botón de Ingreso a Videoconsulta interactivo con Pantalla de Espera Corporativa */}
                         <div>
                           <button
                             type="button"
-                            disabled
-                            className="w-full py-3 px-4 rounded-2xl bg-slate-100 text-slate-400 font-black text-xs flex items-center justify-center gap-2 border border-slate-200 cursor-not-allowed select-none transition-all shadow-inner"
-                            title="La sala de videoconsulta se activará automáticamente a la hora programada"
+                            onClick={() => handleOpenVideoCall(ticket)}
+                            className="w-full py-3 px-4 rounded-2xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-teal-900/20 transition-all cursor-pointer group"
+                            title="Haz clic para ingresar a la sala de videoconsulta médica"
                           >
-                            <Video className="w-4 h-4 text-slate-400" />
-                            <span>📹 Ingresar a Videoconsulta (Se habilita a tu hora programada)</span>
+                            <Video className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                            <span>📹 Ingresar a Videoconsulta en Vivo</span>
                           </button>
                         </div>
 
@@ -3446,6 +3457,127 @@ export default function App() {
       )}
 
 
+
+
+      {/* ========================================================
+          MODAL DE VIDEOCONSULTA EN VIVO CON PANTALLA DE ESPERA CORPORATIVA
+         ======================================================== */}
+      {activeVideoCall && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in">
+          <div className="w-full max-w-5xl h-[92vh] bg-slate-900 rounded-3xl shadow-2xl border border-slate-700/80 flex flex-col overflow-hidden relative">
+            
+            {/* Barra superior de la videoconsulta */}
+            <div className="px-4 py-3 bg-slate-900/95 border-b border-slate-800 text-white flex items-center justify-between gap-3 shrink-0 z-30">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 font-black text-xs shadow-md">
+                  CV
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-teal-400 bg-teal-950/80 border border-teal-800/80 px-2 py-0.5 rounded-full inline-block">
+                      Videoconsulta Segura
+                    </span>
+                    <span className="text-[10px] text-slate-400 hidden xs:inline">
+                      Ficha {activeVideoCall.id}
+                    </span>
+                  </div>
+                  <h3 className="text-xs sm:text-sm font-extrabold text-white truncate">
+                    {activeVideoCall.doctor} • {activeVideoCall.specialty}
+                  </h3>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-800/60 px-3 py-1 rounded-xl">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Conexión Encriptada
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveVideoCall(null);
+                    setIsVideoLoaded(false);
+                  }}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  title="Salir de la videoconsulta"
+                >
+                  <X className="w-4 h-4" />
+                  <span>Finalizar</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Contenedor del Video / Iframe y Loading Screen */}
+            <div className="relative flex-1 w-full h-full bg-slate-950 overflow-hidden">
+              
+              {/* PANTALLA DE ESPERA CORPORATIVA PERSONALIZADA (Visible mientras isVideoLoaded sea false) */}
+              {!isVideoLoaded && (
+                <div className="absolute inset-0 z-50 bg-white flex flex-col items-center justify-center p-6 text-center animate-fade-in transition-opacity duration-500">
+                  
+                  {/* Contenedor central elegante */}
+                  <div className="max-w-md w-full mx-auto space-y-6 flex flex-col items-center">
+                    
+                    {/* Isotipo de la Clínica: Círculo verde con iniciales CV y Cruz médica */}
+                    <div className="relative">
+                      {/* Aura pulsante suave */}
+                      <div className="absolute -inset-3 bg-emerald-100 rounded-full blur-md opacity-75 animate-pulse"></div>
+                      
+                      <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-clinic-dark via-emerald-700 to-teal-500 text-white flex flex-col items-center justify-center shadow-xl border-4 border-white">
+                        <div className="flex items-center justify-center font-display font-black text-2xl sm:text-3xl tracking-tight leading-none">
+                          CV
+                        </div>
+                        <div className="flex items-center gap-0.5 mt-1">
+                          <Activity className="w-3.5 h-3.5 text-emerald-300" />
+                          <span className="text-[9px] font-black tracking-widest uppercase text-emerald-100">Velasco</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Texto institucional y de carga animado */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 text-clinic-emerald animate-spin" />
+                        <span className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider animate-pulse">
+                          Conectando con la Sala Virtual...
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                        Iniciando videoconsulta con <strong className="text-slate-800">{activeVideoCall.doctor}</strong> ({activeVideoCall.specialty}).
+                      </p>
+                    </div>
+
+                    {/* Línea divisoria decorativa sutil */}
+                    <div className="w-16 h-0.5 bg-emerald-200 rounded-full"></div>
+
+                    {/* Eslogan exacto con tipografía elegante y color gris oscuro */}
+                    <div className="pt-2">
+                      <p className="text-base sm:text-lg font-serif italic font-medium text-slate-700 tracking-wide select-none">
+                        “Tu salud nuestra prioridad”
+                      </p>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mt-1">
+                        Clínica Velasco • Trinidad, Beni
+                      </span>
+                    </div>
+
+                  </div>
+
+                </div>
+              )}
+
+              {/* Iframe oficial de Jitsi Meet embebido */}
+              <iframe
+                title="Sala de Videoconsulta Jitsi"
+                src={`https://meet.jit.si/ClinicaVelasco-${activeVideoCall.id}#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false`}
+                allow="camera; microphone; fullscreen; display-capture; autoplay"
+                onLoad={() => setIsVideoLoaded(true)}
+                className="w-full h-full border-0"
+              />
+
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* ========================================================
           MODAL DE IMPRESIÓN / GUARDADO DE PASE MÉDICO DIGITAL (PACIENTE)
