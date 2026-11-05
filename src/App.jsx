@@ -61,8 +61,13 @@ import {
   BarChart3,
   CalendarRange,
   Video,
-  Loader2
+  Loader2,
+  Mic,
+  MicOff,
+  VideoOff,
+  PhoneOff
 } from 'lucide-react';
+import Peer from 'peerjs';
 import confetti from 'canvas-confetti';
 import jsPDF from 'jspdf';
 import VelascoLogo from './components/VelascoLogo';
@@ -191,122 +196,330 @@ function getSpecialtyIcon(iconName, className = "w-6 h-6") {
   }
 }
 
-// Componente de Sala de Videoconsulta usando Jitsi External API
-function JitsiVideoCall({ 
-  activeVideoCall, 
-  systemRole, 
-  userProfile, 
-  setIsVideoLoaded, 
-  onClose 
-}) {
-  const containerRef = useRef(null);
-  const apiRef = useRef(null);
+// Componente de Sala de Videoconsulta Nativa WebRTC con PeerJS
+function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
+  const [localStream, setLocalStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
+  const [isMicMuted, setIsMicMuted] = useState(false);
+  const [isVideoMuted, setIsVideoMuted] = useState(false);
 
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+  const peerRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const remoteStreamRef = useRef(null);
+  const callIntervalRef = useRef(null);
+
+  const cita = activeVideoCall;
+  const isDoctor = systemRole === 'medico';
+  const myPeerId = isDoctor ? `velasco-doc-${cita.id}` : `velasco-pac-${cita.id}`;
+  const targetId = isDoctor ? `velasco-pac-${cita.id}` : `velasco-doc-${cita.id}`;
+
+  // Sincronizar stream local con el elemento <video>
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream]);
+
+  // Sincronizar stream remoto con el elemento <video>
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
+
+  // Inicializar WebRTC y PeerJS
   useEffect(() => {
     let isMounted = true;
-    let fallbackTimer = null;
-    const cita = activeVideoCall;
 
-    const initJitsi = () => {
-      if (!isMounted || !containerRef.current || !window.JitsiMeetExternalAPI) return;
-
-      // Limpiar contenedor previo
-      containerRef.current.innerHTML = '';
-
-      const userName = systemRole === 'medico'
-        ? (cita.doctor || 'Médico Especialista')
-        : (userProfile?.name || cita.patientName || 'Paciente');
-
-      const options = {
-        roomName: `ClinicaVelasco_Teleconsulta_${cita.id}`,
-        parentNode: containerRef.current,
-        width: '100%',
-        height: '100%',
-        userInfo: {
-          displayName: userName
-        },
-        configOverwrite: {
-          prejoinPageEnabled: false,
-          startWithAudioMuted: false,
-          startWithVideoMuted: false,
-          disableDeepLinking: true
-        },
-        interfaceConfigOverwrite: {
-          SHOW_JITSI_WATERMARK: false,
-          SHOW_WATERMARK_FOR_GUESTS: false,
-          MOBILE_APP_PROMO: false,
-          DISABLE_JOIN_LEAVE_NOTIFICATIONS: true
-        }
-      };
-
-      try {
-        const api = new window.JitsiMeetExternalAPI('meet.jit.si', options);
-        apiRef.current = api;
-
-        api.addEventListener('videoConferenceJoined', () => {
-          if (isMounted) {
-            setIsVideoLoaded(true);
-          }
-        });
-
-        // Fallback para ocultar la pantalla de carga si el evento tarda
-        fallbackTimer = setTimeout(() => {
-          if (isMounted) {
-            setIsVideoLoaded(true);
-          }
-        }, 3500);
-
-        api.addEventListener('readyToClose', () => {
-          if (isMounted && onClose) {
-            onClose();
-          }
-        });
-      } catch (error) {
-        console.error('Error inicializando Jitsi Meet API:', error);
-        if (isMounted) {
-          setIsVideoLoaded(true);
-        }
+    const handleRemoteStream = (incomingRemoteStream) => {
+      if (!isMounted || !incomingRemoteStream) return;
+      remoteStreamRef.current = incomingRemoteStream;
+      setRemoteStream(incomingRemoteStream);
+      if (callIntervalRef.current) {
+        clearInterval(callIntervalRef.current);
+        callIntervalRef.current = null;
       }
     };
 
-    // Carga dinámica del script de Jitsi External API si no está disponible
-    if (!window.JitsiMeetExternalAPI) {
-      const existingScript = document.querySelector('script[src="https://meet.jit.si/external_api.js"]');
-      if (existingScript) {
-        existingScript.addEventListener('load', initJitsi);
-      } else {
-        const script = document.createElement('script');
-        script.src = 'https://meet.jit.si/external_api.js';
-        script.async = true;
-        script.onload = () => {
-          if (isMounted) initJitsi();
-        };
-        script.onerror = () => {
-          console.error('Error al cargar https://meet.jit.si/external_api.js');
-          if (isMounted) setIsVideoLoaded(true);
-        };
-        document.body.appendChild(script);
-      }
-    } else {
-      initJitsi();
-    }
+    // 1. Obtener cámara y micrófono local
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then((stream) => {
+        if (!isMounted) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+
+        // 2. Inicializar instancia de PeerJS
+        const peer = new Peer(myPeerId);
+        peerRef.current = peer;
+
+        peer.on('open', () => {
+          // Responder llamadas entrantes de manera automática
+          peer.on('call', (incomingCall) => {
+            incomingCall.answer(stream);
+            incomingCall.on('stream', (rStream) => {
+              handleRemoteStream(rStream);
+            });
+            incomingCall.on('close', () => {
+              if (isMounted) {
+                remoteStreamRef.current = null;
+                setRemoteStream(null);
+              }
+            });
+          });
+
+          // Función para intentar llamar a la contraparte
+          const attemptCall = () => {
+            if (
+              !isMounted || 
+              remoteStreamRef.current || 
+              !peerRef.current || 
+              peerRef.current.destroyed || 
+              !localStreamRef.current
+            ) {
+              return;
+            }
+
+            try {
+              const call = peerRef.current.call(targetId, localStreamRef.current);
+              if (call) {
+                call.on('stream', (rStream) => {
+                  handleRemoteStream(rStream);
+                });
+                call.on('close', () => {
+                  if (isMounted) {
+                    remoteStreamRef.current = null;
+                    setRemoteStream(null);
+                  }
+                });
+                call.on('error', () => {
+                  // Silenciar reintentos habituales mientras la otra parte no se conecta
+                });
+              }
+            } catch (err) {
+              // Silenciar errores durante intentos de conexión
+            }
+          };
+
+          // Intentar llamada inmediata
+          attemptCall();
+
+          // Intervalo cada 3 segundos hasta que haya conexión remota
+          callIntervalRef.current = setInterval(() => {
+            if (!remoteStreamRef.current) {
+              attemptCall();
+            } else if (callIntervalRef.current) {
+              clearInterval(callIntervalRef.current);
+              callIntervalRef.current = null;
+            }
+          }, 3000);
+        });
+
+        peer.on('error', (err) => {
+          // El error 'peer-unavailable' ocurre normalmente mientras la contraparte no ingresa
+          if (err.type === 'peer-unavailable') {
+            return;
+          }
+          console.warn('PeerJS WebRTC status:', err.type, err.message);
+        });
+      })
+      .catch((err) => {
+        console.error('Error al acceder a dispositivos multimedia:', err);
+      });
 
     return () => {
       isMounted = false;
-      if (fallbackTimer) clearTimeout(fallbackTimer);
-      if (apiRef.current) {
+      if (callIntervalRef.current) {
+        clearInterval(callIntervalRef.current);
+        callIntervalRef.current = null;
+      }
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => track.stop());
+        localStreamRef.current = null;
+      }
+      if (peerRef.current) {
         try {
-          apiRef.current.dispose();
-        } catch (e) {
-          console.warn('Error al desmontar Jitsi API:', e);
-        }
-        apiRef.current = null;
+          peerRef.current.destroy();
+        } catch (e) {}
+        peerRef.current = null;
       }
     };
-  }, [activeVideoCall, systemRole, userProfile, setIsVideoLoaded, onClose]);
+  }, [myPeerId, targetId]);
+
+  // Controles de Micrófono
+  const toggleMic = () => {
+    if (localStreamRef.current) {
+      const audioTracks = localStreamRef.current.getAudioTracks();
+      if (audioTracks.length > 0) {
+        const nextState = !isMicMuted;
+        audioTracks[0].enabled = !nextState;
+        setIsMicMuted(nextState);
+      }
+    }
+  };
+
+  // Controles de Cámara
+  const toggleVideo = () => {
+    if (localStreamRef.current) {
+      const videoTracks = localStreamRef.current.getVideoTracks();
+      if (videoTracks.length > 0) {
+        const nextState = !isVideoMuted;
+        videoTracks[0].enabled = !nextState;
+        setIsVideoMuted(nextState);
+      }
+    }
+  };
+
+  // Colgar y Salir
+  const handleHangUp = () => {
+    if (callIntervalRef.current) {
+      clearInterval(callIntervalRef.current);
+      callIntervalRef.current = null;
+    }
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
+    }
+    if (peerRef.current) {
+      try {
+        peerRef.current.destroy();
+      } catch (e) {}
+      peerRef.current = null;
+    }
+    onClose();
+  };
 
   return (
-    <div id="jitsi-container" ref={containerRef} className="w-full h-full" />
+    <div className="relative w-full h-full bg-slate-950 overflow-hidden flex items-center justify-center">
+      {/* Video Remoto a Pantalla Completa */}
+      <video
+        ref={remoteVideoRef}
+        autoPlay
+        playsInline
+        className={`w-full h-full object-cover transition-opacity duration-500 ${remoteStream ? 'opacity-100' : 'opacity-0'}`}
+      />
+
+      {/* PANTALLA DE ESPERA CORPORATIVA INTEGRADA (Visible mientras remoteStream sea null) */}
+      {!remoteStream && (
+        <div className="absolute inset-0 z-20 bg-slate-950 flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+          <div className="max-w-md w-full mx-auto space-y-6 flex flex-col items-center">
+            
+            {/* Isotipo de la Clínica: Círculo verde con iniciales CV y Cruz médica */}
+            <div className="relative">
+              <div className="absolute -inset-4 bg-emerald-500/20 rounded-full blur-xl opacity-80 animate-pulse"></div>
+              
+              <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-emerald-800 via-emerald-600 to-teal-500 text-white flex flex-col items-center justify-center shadow-2xl border-4 border-emerald-400/40">
+                <div className="flex items-center justify-center font-display font-black text-2xl sm:text-3xl tracking-tight leading-none text-white">
+                  CV
+                </div>
+                <div className="flex items-center gap-0.5 mt-1">
+                  <Activity className="w-3.5 h-3.5 text-emerald-200" />
+                  <span className="text-[9px] font-black tracking-widest uppercase text-emerald-100">Velasco</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Texto institucional y de conexión */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+                <span className="text-xs sm:text-sm font-black text-emerald-400 uppercase tracking-wider animate-pulse">
+                  Conectando con la sala médica...
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                {isDoctor 
+                  ? `Esperando el ingreso del paciente (${cita.patientName})...` 
+                  : `Esperando al ${cita.doctor} (${cita.specialty})...`}
+              </p>
+            </div>
+
+            {/* Línea divisoria decorativa sutil */}
+            <div className="w-16 h-0.5 bg-emerald-500/30 rounded-full"></div>
+
+            {/* Eslogan exacto con tipografía elegante */}
+            <div className="pt-1">
+              <p className="text-base sm:text-lg font-serif italic font-medium text-slate-200 tracking-wide select-none">
+                “Tu salud nuestra prioridad”
+              </p>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mt-1">
+                Clínica Velasco • Telemedicina WebRTC
+              </span>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Video Local en Recuadro Flotante (Picture-in-Picture en esquina inferior derecha) */}
+      {localStream && (
+        <div className="absolute bottom-20 right-4 w-28 h-40 md:w-36 md:h-48 rounded-xl overflow-hidden shadow-2xl border-2 border-emerald-500 z-30 bg-slate-900 group">
+          <video
+            ref={localVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-cover transform -scale-x-100"
+          />
+          {isVideoMuted && (
+            <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center text-slate-400 gap-1">
+              <VideoOff className="w-5 h-5 text-red-400" />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Cámara apagada</span>
+            </div>
+          )}
+          <div className="absolute bottom-1.5 left-1.5 bg-slate-950/80 backdrop-blur-sm text-[9px] font-bold text-white px-1.5 py-0.5 rounded flex items-center gap-1">
+            <span className={`w-1.5 h-1.5 rounded-full ${isMicMuted ? 'bg-red-400' : 'bg-emerald-400'}`}></span>
+            <span>Tú ({isDoctor ? 'Dr.' : 'Paciente'})</span>
+          </div>
+        </div>
+      )}
+
+      {/* Barra Flotante de Controles Nativos de Clínica Velasco */}
+      <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 z-40 flex items-center gap-3 bg-slate-900/90 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-700/80 shadow-2xl">
+        {/* Activar / Silenciar Micrófono */}
+        <button
+          type="button"
+          onClick={toggleMic}
+          className={`p-3 rounded-xl transition-all flex items-center justify-center cursor-pointer ${
+            isMicMuted 
+              ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/40' 
+              : 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-600'
+          }`}
+          title={isMicMuted ? "Activar Micrófono" : "Silenciar Micrófono"}
+        >
+          {isMicMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+        </button>
+
+        {/* Encender / Apagar Cámara */}
+        <button
+          type="button"
+          onClick={toggleVideo}
+          className={`p-3 rounded-xl transition-all flex items-center justify-center cursor-pointer ${
+            isVideoMuted 
+              ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/40' 
+              : 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-600'
+          }`}
+          title={isVideoMuted ? "Encender Cámara" : "Apagar Cámara"}
+        >
+          {isVideoMuted ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+        </button>
+
+        {/* Botón Colgar / Salir */}
+        <button
+          type="button"
+          onClick={handleHangUp}
+          className="px-4 py-3 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-red-900/40"
+          title="Colgar y salir de la teleconsulta"
+        >
+          <PhoneOff className="w-5 h-5" />
+          <span className="text-xs hidden sm:inline">Finalizar</span>
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -612,9 +825,8 @@ export default function App() {
   const [showPrintReportModal, setShowPrintReportModal] = useState(false);
   const [selectedTicketForPrint, setSelectedTicketForPrint] = useState(null);
 
-  // Estado para la sala de Videoconsulta / Jitsi y Pantalla de Espera
+  // Estado para la sala de Videoconsulta Nativa WebRTC (PeerJS)
   const [activeVideoCall, setActiveVideoCall] = useState(null);
-  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [doctorPrescriptionText, setDoctorPrescriptionText] = useState('');
 
   // Admin Panel Editing State
@@ -767,7 +979,6 @@ export default function App() {
 
   // Abrir sala de Videoconsulta para el paciente
   const handleOpenVideoCall = (ticket) => {
-    setIsVideoLoaded(false);
     setActiveVideoCall(ticket);
   };
 
@@ -1264,7 +1475,6 @@ export default function App() {
 
     // Cerrar la videoconsulta si estaba abierta
     setActiveVideoCall(null);
-    setIsVideoLoaded(false);
     setDoctorPrescriptionText('');
 
     alert('¡Receta médica emitida exitosamente! La consulta ha sido finalizada y el paciente ya tiene disponible la descarga de su receta.');
@@ -3605,10 +3815,7 @@ export default function App() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => {
-                    setActiveVideoCall(null);
-                    setIsVideoLoaded(false);
-                  }}
+                  onClick={() => setActiveVideoCall(null)}
                   className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
                   title="Salir de la videoconsulta"
                 >
@@ -3621,75 +3828,15 @@ export default function App() {
             {/* Contenedor Principal (Pantalla dividida en modo médico / pantalla completa en modo paciente) */}
             <div className="relative flex-1 w-full h-full bg-slate-950 overflow-hidden flex flex-col lg:flex-row">
               
-              {/* Columna Izquierda: Video / Iframe y Loading Screen */}
+              {/* Columna Izquierda: Video WebRTC Nativo con PeerJS */}
               <div className="relative flex-1 w-full h-full bg-slate-950 overflow-hidden">
-                
-                {/* PANTALLA DE ESPERA CORPORATIVA PERSONALIZADA (Visible mientras isVideoLoaded sea false) */}
-                {!isVideoLoaded && (
-                  <div className="absolute inset-0 z-50 bg-white flex flex-col items-center justify-center p-6 text-center animate-fade-in transition-opacity duration-500">
-                    
-                    {/* Contenedor central elegante */}
-                    <div className="max-w-md w-full mx-auto space-y-6 flex flex-col items-center">
-                      
-                      {/* Isotipo de la Clínica: Círculo verde con iniciales CV y Cruz médica */}
-                      <div className="relative">
-                        {/* Aura pulsante suave */}
-                        <div className="absolute -inset-3 bg-emerald-100 rounded-full blur-md opacity-75 animate-pulse"></div>
-                        
-                        <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-clinic-dark via-emerald-700 to-teal-500 text-white flex flex-col items-center justify-center shadow-xl border-4 border-white">
-                          <div className="flex items-center justify-center font-display font-black text-2xl sm:text-3xl tracking-tight leading-none">
-                            CV
-                          </div>
-                          <div className="flex items-center gap-0.5 mt-1">
-                            <Activity className="w-3.5 h-3.5 text-emerald-300" />
-                            <span className="text-[9px] font-black tracking-widest uppercase text-emerald-100">Velasco</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Texto institucional y de carga animado */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-center gap-2">
-                          <Loader2 className="w-4 h-4 text-clinic-emerald animate-spin" />
-                          <span className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider animate-pulse">
-                            Conectando con la Sala Virtual...
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                          Iniciando videoconsulta con <strong className="text-slate-800">{activeVideoCall.doctor}</strong> ({activeVideoCall.specialty}).
-                        </p>
-                      </div>
-
-                      {/* Línea divisoria decorativa sutil */}
-                      <div className="w-16 h-0.5 bg-emerald-200 rounded-full"></div>
-
-                      {/* Eslogan exacto con tipografía elegante y color gris oscuro */}
-                      <div className="pt-2">
-                        <p className="text-base sm:text-lg font-serif italic font-medium text-slate-700 tracking-wide select-none">
-                          “Tu salud nuestra prioridad”
-                        </p>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mt-1">
-                          Clínica Velasco • Trinidad, Beni
-                        </span>
-                      </div>
-
-                    </div>
-
-                  </div>
-                )}
-
-                {/* Contenedor oficial de Jitsi Meet usando la API Externa (JitsiMeetExternalAPI) */}
-                <JitsiVideoCall
+                <WebRTCVideoCall
                   activeVideoCall={activeVideoCall}
                   systemRole={systemRole}
-                  userProfile={userProfile}
-                  setIsVideoLoaded={setIsVideoLoaded}
                   onClose={() => {
                     setActiveVideoCall(null);
-                    setIsVideoLoaded(false);
                   }}
                 />
-
               </div>
 
               {/* Columna Derecha del Médico: Módulo de Prescripción Médica y Emisión en Vivo */}
