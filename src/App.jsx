@@ -655,14 +655,15 @@ function mergeAppointments(currentList, incomingList) {
       const paymentStatus = isConfirmed ? 'Confirmado' : (inc.paymentStatus || cur.paymentStatus || 'Pendiente');
 
       let status = inc.status;
-      if (cur.status === 'Completado' || inc.status === 'Completado') {
+      if (cur.status === 'Completado' || inc.status === 'Completado' || cur.estado === 'Completado' || inc.estado === 'Completado') {
         status = 'Completado';
-      } else if (cur.status === 'Atendido' || inc.status === 'Atendido') {
+      } else if (cur.status === 'Atendido' || inc.status === 'Atendido' || cur.estado === 'Atendido' || inc.estado === 'Atendido') {
         status = 'Atendido';
       } else if (isConfirmed) {
         status = 'Confirmado';
       }
 
+      const estado = (cur.estado === 'Completado' || inc.estado === 'Completado' || status === 'Completado') ? 'Completado' : (status || 'Confirmado');
       const prescriptionText = inc.prescriptionText || cur.prescriptionText || null;
       const prescriptionDate = inc.prescriptionDate || cur.prescriptionDate || null;
       const voucherImage = inc.voucherImage || cur.voucherImage || null;
@@ -672,6 +673,7 @@ function mergeAppointments(currentList, incomingList) {
         ...inc,
         paymentStatus,
         status,
+        estado,
         prescriptionText,
         prescriptionDate,
         voucherImage
@@ -1336,6 +1338,10 @@ export default function App() {
 
   // Abrir sala de Videoconsulta para el paciente
   const handleOpenVideoCall = (ticket) => {
+    if (ticket.estado === 'Completado' || ticket.status === 'Completado') {
+      alert('Esta teleconsulta ya ha sido finalizada y cuenta con su receta médica emitida.');
+      return;
+    }
     setActiveVideoCall(ticket);
   };
 
@@ -1667,7 +1673,7 @@ export default function App() {
     }));
   };
 
-  // Función para generar y descargar la Receta Médica en PDF con jsPDF
+  // Función centralizada para generar y descargar la Receta Médica en PDF con Isotipo (jsPDF)
   const handleGeneratePrescriptionPDF = (ticket) => {
     try {
       const doc = new jsPDF({
@@ -1676,142 +1682,125 @@ export default function App() {
         format: 'a4'
       });
 
-      const todayStr = new Date().toLocaleDateString('es-ES', {
+      const todayStr = ticket.prescriptionDate || new Date().toLocaleDateString('es-ES', {
         day: '2-digit',
         month: 'long',
         year: 'numeric'
       });
 
-      // Encabezado institucional - Franja superior verde esmeralda
-      doc.setFillColor(4, 106, 40); // #046A28
-      doc.rect(0, 0, 210, 26, 'F');
+      // 1. Membrete e Isotipo: En la esquina superior izquierda del PDF
+      // Dibuja el Isotipo verde esmeralda con texto 'CV' en color blanco y negrita
+      doc.setFillColor(16, 185, 129);
+      doc.circle(28, 22, 10, 'F');
 
-      // 1. Isotipo Oficial de Clínica Velasco en la esquina superior (Círculo blanco con iniciales "CV" en verde)
-      doc.setFillColor(255, 255, 255);
-      doc.circle(20, 13, 8, 'F');
-      
-      doc.setTextColor(4, 106, 40);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.text('CV', 20, 16.5, { align: 'center' });
-
-      // Título en la franja
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(17);
-      doc.text('CLÍNICA VELASCO', 33, 14);
+      doc.setFontSize(14);
+      doc.text('CV', 28, 26.5, { align: 'center' });
 
-      doc.setFontSize(8.5);
+      // Al lado del logo, escribe "CLÍNICA VELASCO" (fuente grande) y "Servicio de Telemedicina" (fuente más pequeña)
+      doc.setTextColor(15, 23, 42);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.text('CLÍNICA VELASCO', 43, 20);
+
       doc.setFont('helvetica', 'normal');
-      doc.text('TELEMEDICINA Y CENTRO MÉDICO DE ALTA COMPLEJIDAD • TRINIDAD, BENI', 33, 20);
+      doc.setFontSize(11);
+      doc.setTextColor(16, 185, 129);
+      doc.text('Servicio de Telemedicina', 43, 26);
 
       // Eslogan oficial
-      doc.setTextColor(51, 65, 85);
       doc.setFont('helvetica', 'italic');
-      doc.setFontSize(11);
-      doc.text('“Tu salud nuestra prioridad”', 105, 34, { align: 'center' });
-
-      // Línea divisoria elegante
-      doc.setDrawColor(203, 213, 225);
-      doc.setLineWidth(0.5);
-      doc.line(20, 38, 190, 38);
-
-      // Membrete / Datos del documento
-      doc.setTextColor(15, 23, 42);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(13);
-      doc.text('RECETA MÉDICA DIGITAL Y PRESCRIPCIÓN', 20, 47);
-
       doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
       doc.setTextColor(100, 116, 139);
-      doc.text(`Ficha / Consulta: ${ticket.id}`, 190, 47, { align: 'right' });
-      doc.text(`Fecha de Emisión: ${todayStr}`, 190, 52, { align: 'right' });
+      doc.text('“Tu salud nuestra prioridad”', 43, 31);
 
-      // Recuadro de información del paciente y médico tratante
+      // Línea divisoria superior
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.5);
+      doc.line(20, 36, 190, 36);
+
+      // 2. Datos del Paciente: Sección limpia con Ficha, Paciente y Fecha
       doc.setFillColor(248, 250, 252);
       doc.setDrawColor(226, 232, 240);
-      doc.roundedRect(20, 56, 170, 32, 3, 3, 'FD');
+      doc.roundedRect(20, 42, 170, 26, 3, 3, 'FD');
 
-      doc.setFontSize(9);
+      const patientName = ticket.beneficiaryName 
+        ? `${ticket.patientName} (Beneficiario / Menor: ${ticket.beneficiaryName})` 
+        : (ticket.patientName || 'No registrado');
+
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(15, 23, 42);
-      doc.text('DATOS DEL PACIENTE:', 25, 63);
-      doc.text('MÉDICO TRATANTE:', 110, 63);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(51, 65, 85);
-      
-      const patientFull = ticket.beneficiaryName 
-        ? `${ticket.patientName} (Menor / Beneficiario)` 
-        : ticket.patientName;
-
-      doc.text(`Nombre: ${patientFull}`, 25, 69);
-      doc.text(`Teléfono: ${ticket.patientPhone || 'No registrado'}`, 25, 75);
-      doc.text(`Modalidad: Videoconsulta Oficial`, 25, 81);
-
-      doc.text(`Doctor: ${ticket.doctor}`, 110, 69);
-      doc.text(`Especialidad: ${ticket.specialty}`, 110, 75);
-      doc.text(`Sede: Trinidad, Beni - Bolivia`, 110, 81);
-
-      // Sección Rp / Prescripción médica
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
-      doc.setTextColor(4, 106, 40);
-      doc.text('Rp / PRESCRIPCIÓN MÉDICA E INDICACIONES:', 20, 98);
-
-      // Marco contenedor para el cuerpo de la receta
-      doc.setDrawColor(4, 106, 40);
-      doc.setLineWidth(0.4);
-      doc.rect(20, 102, 170, 115);
-
-      // Contenido de la prescripción
-      doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(15, 23, 42);
-      
-      const prescriptionText = ticket.prescriptionText || 
-        '1. Medicación preventiva e hidratación según tolerancia.\n2. Reposo relativo por 48 horas.\n3. Control y reevaluación si persisten síntomas.\n\n*Prescripción emitida por el profesional médico tratante a través del servicio oficial de Telemedicina de Clínica Velasco.*';
+      doc.text(`Ficha: ${ticket.id}`, 26, 50);
+      doc.text(`Paciente: ${patientName}`, 26, 60);
 
-      const splitText = doc.splitTextToSize(prescriptionText, 160);
-      doc.text(splitText, 25, 111);
+      doc.text(`Fecha: ${todayStr}`, 125, 50);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(71, 85, 105);
+      const doctorName = ticket.doctor || 'Dr. Alejandro Velasco';
+      doc.text(`Médico: ${doctorName}`, 125, 60);
 
-      // Pie de página con espacio para firma y sello del doctor
-      const footerY = 248;
-
-      // 2. Firma Digital Simulada en estilo cursivo/manuscrito centrada justo por encima de la línea
-      doc.setTextColor(15, 76, 129); // Azul tinta médica formal #0F4C81
-      doc.setFont('times', 'bolditalic');
-      doc.setFontSize(17);
-      doc.text(`${ticket.doctor}`, 145, footerY - 5, { align: 'center' });
-
-      // Sello digital distintivo en verde
-      doc.setTextColor(4, 106, 40);
+      // 3. Cuerpo: Imprime el prescriptionText respetando los saltos de línea
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7.5);
-      doc.text('VALIDADO POR SESIÓN MÉDICA SEGURA', 145, footerY - 1, { align: 'center' });
+      doc.setFontSize(12);
+      doc.setTextColor(16, 185, 129);
+      doc.text('Rp / PRESCRIPCIÓN MÉDICA E INDICACIONES:', 20, 78);
 
-      // Línea de firma
-      doc.setDrawColor(100, 116, 139);
-      doc.setLineWidth(0.5);
-      doc.line(110, footerY, 180, footerY);
-
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(15, 23, 42);
-      doc.text(`Dr. / Dra. ${ticket.doctor}`, 145, footerY + 5, { align: 'center' });
+      // Marco contenedor para el cuerpo de la receta
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.4);
+      doc.rect(20, 82, 170, 125);
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(100, 116, 139);
-      doc.text(`${ticket.specialty} • Reg. Colegio Médico Beni`, 145, footerY + 9, { align: 'center' });
-      doc.text('Firma y Sello Digital Verificado • Telemedicina', 145, footerY + 13, { align: 'center' });
+      doc.setFontSize(10.5);
+      doc.setTextColor(15, 23, 42);
 
-      // Aviso legal inferior
+      const prescriptionText = ticket.prescriptionText || 
+        '1. Medicación preventiva e hidratación según tolerancia.\n2. Reposo relativo por 48 horas.\n3. Control y reevaluación médica si persisten síntomas.';
+
+      // doc.splitTextToSize divide el texto respetando los saltos de línea y el ancho
+      const splitText = doc.splitTextToSize(prescriptionText, 160);
+      doc.text(splitText, 25, 92);
+
+      // 4. Firma Digital: En el tercio inferior del PDF, línea horizontal corta centrada
+      const lineY = 248;
+      const lineStartX = 75;
+      const lineEndX = 135;
+
+      // Arriba de la línea, fuente cursiva (itálica/Times) grande simulando una firma real
+      doc.setTextColor(15, 76, 129);
+      doc.setFont('times', 'bolditalic');
+      doc.setFontSize(18);
+      doc.text('Dr. Alejandro Velasco', 105, lineY - 4, { align: 'center' });
+
+      // Línea horizontal corta centrada
+      doc.setDrawColor(100, 116, 139);
+      doc.setLineWidth(0.5);
+      doc.line(lineStartX, lineY, lineEndX, lineY);
+
+      // Debajo de la línea: "Dr. Alejandro Velasco", "Especialidad: Cirugía", "Firma Digital Validada"
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text('Dr. Alejandro Velasco', 105, lineY + 6, { align: 'center' });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Especialidad: Cirugía', 105, lineY + 11, { align: 'center' });
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(16, 185, 129);
+      doc.text('Firma Digital Validada', 105, lineY + 16, { align: 'center' });
+
+      // Pie de página oficial
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(148, 163, 184);
-      doc.text('Clínica Velasco • Av. Busch esq. Nicolás Suárez, Trinidad, Beni - Bolivia • Central: (+591) 69400096', 105, 280, { align: 'center' });
-      doc.text('Este documento es una receta médica digital oficial emitida conforme a normativas de Telemedicina.', 105, 284, { align: 'center' });
+      doc.text('Clínica Velasco • Servicio Oficial de Telemedicina • Documento Digital Emitido', 105, 282, { align: 'center' });
 
       // Guardar y descargar automáticamente
       const fileName = `Receta-Clinica-Velasco-${ticket.id}.pdf`;
@@ -1822,21 +1811,33 @@ export default function App() {
     }
   };
 
-  // Función del Médico para emitir la receta y finalizar la consulta
-  const handleDoctorEmitPrescription = (ticketId) => {
+  const generatePrescriptionPDF = handleGeneratePrescriptionPDF;
+
+  // Función para emitir la receta, finalizar la consulta y bloquear la sala
+  const emitirReceta = (ticketId) => {
     if (!doctorPrescriptionText.trim()) {
       alert('Por favor redacta la prescripción médica o las indicaciones antes de emitir la receta.');
       return;
     }
 
+    const prescription = doctorPrescriptionText.trim();
+    const prescriptionDate = new Date().toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    let updatedTicket = null;
     const updated = appointments.map(app => {
       if (app.id === ticketId) {
-        return {
+        updatedTicket = {
           ...app,
-          prescriptionText: doctorPrescriptionText.trim(),
-          prescriptionDate: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }),
-          status: 'Completado'
+          prescriptionText: prescription,
+          prescriptionDate: prescriptionDate,
+          status: 'Completado',
+          estado: 'Completado'
         };
+        return updatedTicket;
       }
       return app;
     });
@@ -1847,17 +1848,25 @@ export default function App() {
     setActiveVideoCall(null);
     setDoctorPrescriptionText('');
 
+    if (updatedTicket) {
+      handleGeneratePrescriptionPDF(updatedTicket);
+    }
+
     alert('¡Receta médica emitida exitosamente! La consulta ha sido finalizada y el paciente ya tiene disponible la descarga de su receta.');
   };
+
+  const handleDoctorEmitPrescription = emitirReceta;
 
   // Filter appointments for Doctor Panel
   const doctorAppointments = selectedDoctorId === 'all' ? appointments : appointments.filter(a => !selectedDoctorId || a.doctor === selectedDoctorId);
 
-  // Turnos para el Paciente: muestra turnos pendientes o aquellos ya atendidos que cuentan con Receta Médica emitida para descargar
+  // Turnos para el Paciente: muestra turnos pendientes o aquellos completados con Receta Médica emitida para descargar
   const activePatientAppointments = appointments.filter(app => {
     const s = (app.status || '').toLowerCase().trim();
+    const e = (app.estado || '').toLowerCase().trim();
     if (app.prescriptionText) return true; // Citas con receta disponible para descarga
-    return s !== 'atendido' && s !== 'atendida' && s !== 'completado';
+    if (s === 'completado' || e === 'completado') return true; // Mantener visible para descarga de receta
+    return s !== 'atendido' && s !== 'atendida';
   });
 
   // Helper para clasificar citas según el periodo seleccionado en Caja / Admin
@@ -2713,7 +2722,7 @@ export default function App() {
 
                         {/* Botón de Videoconsulta o Descarga de Receta Médica */}
                         <div>
-                          {ticket.prescriptionText ? (
+                          {ticket.estado === 'Completado' || ticket.status === 'Completado' || ticket.prescriptionText ? (
                             <button
                               type="button"
                               onClick={() => handleGeneratePrescriptionPDF(ticket)}
@@ -2721,7 +2730,7 @@ export default function App() {
                               title="Descargar Receta Médica oficial en formato PDF"
                             >
                               <FileText className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                              <span>📄 Descargar Receta Médica (PDF)</span>
+                              <span>📄 Descargar Receta Médica</span>
                             </button>
                           ) : (
                             <button
@@ -3552,19 +3561,23 @@ export default function App() {
 
                     {/* Botones de acción médica */}
                     <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2">
-                      <button
-                        onClick={() => {
-                          handleDoctorCallPatient(app.id, 'Sala Virtual Segura');
-                          handleOpenVideoCall(app);
-                        }}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl transition-all cursor-pointer shadow-sm"
-                        title="Entrar a la videoconsulta y redactar receta médica"
-                      >
-                        <Video className="w-3.5 h-3.5" />
-                        <span>📹 Iniciar Videoconsulta</span>
-                      </button>
-
-
+                      {app.estado === 'Completado' || app.status === 'Completado' ? (
+                        <div className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold text-xs rounded-xl shadow-xs">
+                          <span>✅ Atendido</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            handleDoctorCallPatient(app.id, 'Sala Virtual Segura');
+                            handleOpenVideoCall(app);
+                          }}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl transition-all cursor-pointer shadow-sm"
+                          title="Entrar a la videoconsulta y redactar receta médica"
+                        >
+                          <Video className="w-3.5 h-3.5" />
+                          <span>📹 Iniciar Teleconsulta</span>
+                        </button>
+                      )}
 
                       {app.prescriptionText ? (
                         <button
@@ -3575,7 +3588,7 @@ export default function App() {
                           <FileText className="w-3.5 h-3.5" />
                           <span>Ver Receta PDF</span>
                         </button>
-                      ) : (
+                      ) : !(app.estado === 'Completado' || app.status === 'Completado') && (
                         <button
                           onClick={() => handleDoctorMarkAttended(app.id)}
                           className="inline-flex items-center justify-center gap-1 py-2 px-3 bg-slate-600 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
