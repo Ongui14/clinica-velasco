@@ -750,7 +750,14 @@ export default function App() {
   const [appointments, setAppointments] = useState(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_CITAS_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.map(c => {
+          if ((c.status === 'Atendido' || c.estado === 'Atendido') && c.estado !== 'Atendido') return { ...c, estado: 'Atendido' };
+          if ((c.status === 'Completado' || c.estado === 'Completado') && c.estado !== 'Completado') return { ...c, estado: 'Completado' };
+          return c;
+        });
+      }
     } catch (e) {}
     // Fechas dinámicas para la demostración
     const now = new Date();
@@ -827,7 +834,8 @@ export default function App() {
         patientPhone: '68291039',
         voucherRef: 'BNB-1029381',
         paymentStatus: 'Verificado y Aprobado',
-        status: 'Atendido'
+        status: 'Atendido',
+        estado: 'Atendido'
       },
       {
         id: 'CV-4785',
@@ -844,7 +852,8 @@ export default function App() {
         patientPhone: '72839102',
         voucherRef: 'Transf-992019',
         paymentStatus: 'Verificado y Aprobado',
-        status: 'Atendido'
+        status: 'Atendido',
+        estado: 'Atendido'
       },
       {
         id: 'CV-4740',
@@ -861,7 +870,8 @@ export default function App() {
         patientPhone: '71829304',
         voucherRef: 'Union-491029',
         paymentStatus: 'Verificado y Aprobado',
-        status: 'Atendido'
+        status: 'Atendido',
+        estado: 'Atendido'
       },
       {
         id: 'CV-4712',
@@ -878,7 +888,8 @@ export default function App() {
         patientPhone: '69481920',
         voucherRef: 'BNB-883019',
         paymentStatus: 'Verificado y Aprobado',
-        status: 'Atendido'
+        status: 'Atendido',
+        estado: 'Atendido'
       }
     ];
   });
@@ -1469,12 +1480,19 @@ export default function App() {
 
   // Doctor Action: Mark as attended
   const handleDoctorMarkAttended = (ticketId) => {
-    setAppointments(prev => prev.map(app => {
+    const updated = appointments.map(app => {
       if (app.id === ticketId) {
-        return { ...app, status: 'Atendido' };
+        return { ...app, status: 'Atendido', estado: 'Atendido' };
       }
       return app;
-    }));
+    });
+    setAppointments(updated);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_CITAS_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Error al guardar citas en localStorage:', e);
+    }
+    broadcastSyncAppointments(updated);
   };
   // Doctor Action: Abrir Historial Clínico de un paciente
   const handleOpenPatientHistory = (app) => {
@@ -2016,6 +2034,9 @@ export default function App() {
       subtotal
     };
   });
+
+  // Filtrado estricto antes del renderizado en el Panel del Médico
+  const citasActivasMedico = appointments.filter(cita => cita.estado !== 'Atendido' && cita.estado !== 'Completado');
 
   return (
     <div className="min-h-screen bg-clinic-pearl flex flex-col justify-between selection:bg-clinic-emerald selection:text-white">
@@ -3600,11 +3621,11 @@ export default function App() {
                 Pacientes Agendados para {selectedDoctorId}
               </h3>
               <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700">
-                {citasPendientes.filter(a => selectedDoctorId === 'all' || !selectedDoctorId || a.doctor === selectedDoctorId).length} Pacientes en Agenda
+                {citasActivasMedico.length} Pacientes en Agenda
               </span>
             </div>
 
-            {citasPendientes.filter(a => selectedDoctorId === 'all' || !selectedDoctorId || a.doctor === selectedDoctorId).length === 0 ? (
+            {citasActivasMedico.length === 0 ? (
               <div className="bg-white rounded-3xl p-10 text-center border border-slate-200 text-slate-500 space-y-2">
                 <Clock className="w-8 h-8 mx-auto text-slate-400" />
                 <p className="font-bold text-sm text-slate-800">No hay pacientes agendados actualmente para este consultorio.</p>
@@ -3612,7 +3633,7 @@ export default function App() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {citasPendientes.filter(a => selectedDoctorId === 'all' || !selectedDoctorId || a.doctor === selectedDoctorId).map((app) => (
+                {citasActivasMedico.map((app) => (
                   <div
                     key={app.id}
                     className={`bg-white rounded-3xl p-5 border shadow-soft-sm space-y-4 flex flex-col justify-between transition-all ${
