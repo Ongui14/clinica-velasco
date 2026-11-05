@@ -3562,7 +3562,7 @@ export default function App() {
                 {/* Iframe oficial de Jitsi Meet embebido */}
                 <iframe
                   title="Sala de Videoconsulta Jitsi"
-                  src={`https://meet.jit.si/ClinicaVelasco-${activeVideoCall.id}#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false`}
+                  src={`https://meet.jit.si/ClinicaVelasco_Teleconsulta_${activeVideoCall.id}#config.disableDeepLinking=true&config.prejoinPageEnabled=false&interfaceConfig.SHOW_JITSI_WATERMARK=false&interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false&interfaceConfig.SHOW_BRAND_WATERMARK=false&interfaceConfig.MOBILE_APP_PROMO=false`}
                   allow="camera; microphone; fullscreen; display-capture; autoplay"
                   onLoad={() => setIsVideoLoaded(true)}
                   className="w-full h-full border-0"
