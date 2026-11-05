@@ -599,6 +599,59 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
   );
 }
 
+const SYNC_HUB_ID = 'clinica-velasco-data-sync-hub';
+
+// Función para fusionar citas garantizando actualizaciones en tiempo real
+function mergeAppointments(currentList, incomingList) {
+  if (!Array.isArray(incomingList)) return currentList || [];
+  if (!Array.isArray(currentList)) return incomingList || [];
+
+  const currentMap = new Map(currentList.map(item => [item.id, item]));
+  const incomingMap = new Map(incomingList.map(item => [item.id, item]));
+
+  const allIds = Array.from(new Set([
+    ...incomingList.map(a => a.id),
+    ...currentList.map(a => a.id)
+  ]));
+
+  return allIds.map(id => {
+    const cur = currentMap.get(id);
+    const inc = incomingMap.get(id);
+
+    if (cur && inc) {
+      const isConfirmed = inc.paymentStatus === 'Confirmado' || cur.paymentStatus === 'Confirmado'
+        || inc.paymentStatus === 'Verificado y Aprobado' || cur.paymentStatus === 'Verificado y Aprobado';
+      
+      const paymentStatus = isConfirmed ? 'Confirmado' : (inc.paymentStatus || cur.paymentStatus || 'Pendiente');
+
+      let status = inc.status;
+      if (cur.status === 'Completado' || inc.status === 'Completado') {
+        status = 'Completado';
+      } else if (cur.status === 'Atendido' || inc.status === 'Atendido') {
+        status = 'Atendido';
+      } else if (isConfirmed) {
+        status = 'Confirmado';
+      }
+
+      const prescriptionText = inc.prescriptionText || cur.prescriptionText || null;
+      const prescriptionDate = inc.prescriptionDate || cur.prescriptionDate || null;
+      const voucherImage = inc.voucherImage || cur.voucherImage || null;
+
+      return {
+        ...cur,
+        ...inc,
+        paymentStatus,
+        status,
+        prescriptionText,
+        prescriptionDate,
+        voucherImage
+      };
+    }
+
+    return inc || cur;
+  });
+}
+
 export default function App() {
   // Global Mode: 'paciente' | 'admin' | 'medico' | 'guardia'
   const [systemRole, setSystemRole] = useState('paciente');
@@ -885,6 +938,204 @@ export default function App() {
   const [voucherFileName, setVoucherFileName] = useState('');
   const [voucherError, setVoucherError] = useState('');
   const [bookingSuccessModal, setBookingSuccessModal] = useState(null);
+  const [voucherImageBase64, setVoucherImageBase64] = useState(null);
+  const [viewingVoucherModal, setViewingVoucherModal] = useState(null);
+
+  const appointmentsRef = useRef(appointments);
+  appointmentsRef.current = appointments;
+
+  const syncPeerRef = useRef(null);
+  const syncConnectionsRef = useRef([]);
+  const hubConnectionRef = useRef(null);
+
+  // Escuchar eventos de storage para sincronizar pestañas en el mismo navegador
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === LOCAL_STORAGE_CITAS_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setAppointments(parsed);
+          }
+        } catch (err) {}
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Función para retransmitir las citas actualizadas a través de PeerJS
+  const broadcastSyncAppointments = (updatedList) => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_CITAS_KEY, JSON.stringify(updatedList));
+    } catch (e) {}
+
+    // Si somos Hub, enviar a todos los clientes conectados
+    syncConnectionsRef.current.forEach(conn => {
+      if (conn && conn.open) {
+        try {
+          conn.send({ type: 'APPOINTMENTS_SYNC', payload: updatedList });
+        } catch (err) {}
+      }
+    });
+
+    // Si somos cliente, enviar al Hub
+    if (hubConnectionRef.current && hubConnectionRef.current.open) {
+      try {
+        hubConnectionRef.current.send({ type: 'APPOINTMENTS_SYNC', payload: updatedList });
+      } catch (err) {}
+    }
+  };
+
+  // Canal de sincronización PeerJS en segundo plano (entre celular y laptop)
+  useEffect(() => {
+    let isMounted = true;
+    let retryTimer = null;
+    const isStaff = systemRole === 'admin' || systemRole === 'medico' || systemRole === 'guardia';
+
+    const setupClientConn = (conn) => {
+      conn.on('open', () => {
+        hubConnectionRef.current = conn;
+        conn.send({ type: 'APPOINTMENTS_SYNC', payload: appointmentsRef.current });
+      });
+
+      conn.on('data', (data) => {
+        if (data && data.type === 'APPOINTMENTS_SYNC' && Array.isArray(data.payload)) {
+          setAppointments(prev => {
+            const merged = mergeAppointments(prev, data.payload);
+            try {
+              localStorage.setItem(LOCAL_STORAGE_CITAS_KEY, JSON.stringify(merged));
+            } catch (e) {}
+            return merged;
+          });
+        }
+      });
+
+      conn.on('close', () => {
+        if (hubConnectionRef.current === conn) hubConnectionRef.current = null;
+      });
+
+      conn.on('error', () => {
+        if (hubConnectionRef.current === conn) hubConnectionRef.current = null;
+      });
+    };
+
+    const connectAsClient = () => {
+      if (!isMounted) return;
+      if (syncPeerRef.current) {
+        try { syncPeerRef.current.destroy(); } catch (e) {}
+        syncPeerRef.current = null;
+      }
+
+      const clientPeer = new Peer(undefined, peerConfig);
+      syncPeerRef.current = clientPeer;
+
+      clientPeer.on('open', () => {
+        const conn = clientPeer.connect(SYNC_HUB_ID, { reliable: true });
+        setupClientConn(conn);
+      });
+
+      clientPeer.on('error', (err) => {
+        if (err.type === 'peer-unavailable') {
+          if (retryTimer) clearTimeout(retryTimer);
+          retryTimer = setTimeout(() => {
+            if (isMounted && (!hubConnectionRef.current || !hubConnectionRef.current.open)) {
+              connectAsClient();
+            }
+          }, 4000);
+        }
+      });
+    };
+
+    const initHub = () => {
+      if (!isMounted) return;
+      if (syncPeerRef.current) {
+        try { syncPeerRef.current.destroy(); } catch (e) {}
+        syncPeerRef.current = null;
+      }
+
+      const hubPeer = new Peer(SYNC_HUB_ID, peerConfig);
+      syncPeerRef.current = hubPeer;
+
+      hubPeer.on('open', () => {});
+
+      hubPeer.on('connection', (conn) => {
+        syncConnectionsRef.current.push(conn);
+
+        conn.on('open', () => {
+          conn.send({ type: 'APPOINTMENTS_SYNC', payload: appointmentsRef.current });
+        });
+
+        conn.on('data', (data) => {
+          if (data && data.type === 'APPOINTMENTS_SYNC' && Array.isArray(data.payload)) {
+            setAppointments(prev => {
+              const merged = mergeAppointments(prev, data.payload);
+              try {
+                localStorage.setItem(LOCAL_STORAGE_CITAS_KEY, JSON.stringify(merged));
+              } catch (e) {}
+
+              // Retransmitir al resto de los clientes
+              syncConnectionsRef.current.forEach(otherConn => {
+                if (otherConn !== conn && otherConn.open) {
+                  try {
+                    otherConn.send({ type: 'APPOINTMENTS_SYNC', payload: merged });
+                  } catch (e) {}
+                }
+              });
+
+              return merged;
+            });
+          }
+        });
+
+        conn.on('close', () => {
+          syncConnectionsRef.current = syncConnectionsRef.current.filter(c => c !== conn);
+        });
+
+        conn.on('error', () => {
+          syncConnectionsRef.current = syncConnectionsRef.current.filter(c => c !== conn);
+        });
+      });
+
+      hubPeer.on('error', (err) => {
+        if (err.type === 'unavailable-id') {
+          // Hub ya tomado por otra ventana, conectarse como cliente
+          connectAsClient();
+          return;
+        }
+      });
+    };
+
+    if (isStaff) {
+      initHub();
+    } else {
+      connectAsClient();
+      const pingInterval = setInterval(() => {
+        if (isMounted && (!hubConnectionRef.current || !hubConnectionRef.current.open)) {
+          connectAsClient();
+        }
+      }, 5000);
+
+      return () => {
+        isMounted = false;
+        clearInterval(pingInterval);
+        if (retryTimer) clearTimeout(retryTimer);
+        if (syncPeerRef.current) {
+          try { syncPeerRef.current.destroy(); } catch (e) {}
+          syncPeerRef.current = null;
+        }
+      };
+    }
+
+    return () => {
+      isMounted = false;
+      if (retryTimer) clearTimeout(retryTimer);
+      if (syncPeerRef.current) {
+        try { syncPeerRef.current.destroy(); } catch (e) {}
+        syncPeerRef.current = null;
+      }
+    };
+  }, [systemRole]);
 
   // Patient Emergency Mode states: null | 'ambulancia' | 'camino'
   const [emergencySubMode, setEmergencySubMode] = useState(null);
@@ -1089,13 +1340,18 @@ export default function App() {
       beneficiaryName: beneficiaryName.trim() || null,
       patientPhone: userProfile.phone,
       voucherRef: voucherFileName ? `Archivo: ${voucherFileName}` : 'Comprobante Adjuntado',
-      paymentStatus: 'Pendiente de Verificación Admin',
-      status: 'Programado'
+      voucherImage: voucherImageBase64 || null,
+      paymentStatus: 'Pendiente',
+      status: 'Pendiente'
     };
 
-    setAppointments(prev => [newTicket, ...prev]);
+    const updated = [newTicket, ...appointments];
+    setAppointments(updated);
+    broadcastSyncAppointments(updated);
     setSelectedSpecialtyForBooking(null);
     setBookingSuccessModal(newTicket);
+    setVoucherFileName('');
+    setVoucherImageBase64(null);
 
     try {
       confetti({
@@ -1325,12 +1581,18 @@ export default function App() {
 
   // Admin: Confirm payment voucher
   const handleAdminVerifyPayment = (ticketId) => {
-    setAppointments(prev => prev.map(app => {
+    const updated = appointments.map(app => {
       if (app.id === ticketId) {
-        return { ...app, paymentStatus: 'Verificado y Aprobado' };
+        return { 
+          ...app, 
+          paymentStatus: 'Confirmado',
+          status: 'Confirmado'
+        };
       }
       return app;
-    }));
+    });
+    setAppointments(updated);
+    broadcastSyncAppointments(updated);
   };
 
   // Admin: Update a specialty field
@@ -1537,19 +1799,21 @@ export default function App() {
       return;
     }
 
-    setAppointments(prev => prev.map(app => {
+    const updated = appointments.map(app => {
       if (app.id === ticketId) {
         return {
           ...app,
           prescriptionText: doctorPrescriptionText.trim(),
           prescriptionDate: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }),
-          status: 'Atendido'
+          status: 'Completado'
         };
       }
       return app;
-    }));
+    });
 
-    // Cerrar la videoconsulta si estaba abierta
+    setAppointments(updated);
+    broadcastSyncAppointments(updated);
+
     setActiveVideoCall(null);
     setDoctorPrescriptionText('');
 
@@ -1557,13 +1821,13 @@ export default function App() {
   };
 
   // Filter appointments for Doctor Panel
-  const doctorAppointments = appointments.filter(a => a.doctor === selectedDoctorId);
+  const doctorAppointments = selectedDoctorId === 'all' ? appointments : appointments.filter(a => !selectedDoctorId || a.doctor === selectedDoctorId);
 
   // Turnos para el Paciente: muestra turnos pendientes o aquellos ya atendidos que cuentan con Receta Médica emitida para descargar
   const activePatientAppointments = appointments.filter(app => {
     const s = (app.status || '').toLowerCase().trim();
     if (app.prescriptionText) return true; // Citas con receta disponible para descarga
-    return s !== 'atendido' && s !== 'atendida';
+    return s !== 'atendido' && s !== 'atendida' && s !== 'completado';
   });
 
   // Helper para clasificar citas según el periodo seleccionado en Caja / Admin
@@ -1601,6 +1865,14 @@ export default function App() {
   };
 
   const periodAppointments = getPeriodAppointments();
+  // Citas para Admin ordenadas destacando las 'Pendiente' arriba
+  const sortedAdminAppointments = [...appointments].sort((a, b) => {
+    const isPendingA = a.paymentStatus === 'Pendiente' || a.paymentStatus?.toLowerCase().includes('pendiente') || a.status === 'Pendiente';
+    const isPendingB = b.paymentStatus === 'Pendiente' || b.paymentStatus?.toLowerCase().includes('pendiente') || b.status === 'Pendiente';
+    if (isPendingA && !isPendingB) return -1;
+    if (!isPendingA && isPendingB) return 1;
+    return 0;
+  });
 
   // Cálculos de resumen financiero para el periodo
   const totalRecaudadoConfirmado = periodAppointments
@@ -2394,11 +2666,11 @@ export default function App() {
                           <div className="flex items-center justify-between pt-1 border-t border-emerald-100">
                             <span className="text-slate-500 font-semibold text-[11px]">Estado de Verificación:</span>
                             <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                              ticket.paymentStatus === 'Verificado y Aprobado' 
+                              ticket.paymentStatus === 'Confirmado' || ticket.paymentStatus === 'Verificado y Aprobado' 
                                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
                                 : 'bg-amber-100 text-amber-900 border border-amber-200 animate-pulse'
                             }`}>
-                              {ticket.paymentStatus === 'Verificado y Aprobado' ? '✓ Pago Aprobado' : '⏳ Pendiente Admin'}
+                              {ticket.paymentStatus === 'Confirmado' || ticket.paymentStatus === 'Verificado y Aprobado' ? '✓ Pago Confirmado' : '⏳ Pendiente Caja/Admin'}
                             </span>
                           </div>
                         </div>
@@ -2730,7 +3002,7 @@ export default function App() {
               <div>
                 {/* 1. Vista Móvil: Tarjetas Apiladas (md:hidden) */}
                 <div className="grid grid-cols-1 gap-3.5 md:hidden">
-                  {appointments.map((app) => (
+                  {sortedAdminAppointments.map((app) => (
                     <div 
                       key={app.id}
                       className="bg-slate-50 p-4 rounded-2xl border border-slate-200/90 space-y-3"
@@ -2740,11 +3012,11 @@ export default function App() {
                           Ficha {app.id}
                         </span>
                         <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                          app.paymentStatus === 'Verificado y Aprobado'
+                          app.paymentStatus === 'Confirmado' || app.paymentStatus === 'Verificado y Aprobado'
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-amber-100 text-amber-800 animate-pulse'
                         }`}>
-                          {app.paymentStatus || 'Pendiente'}
+                          {app.paymentStatus === 'Confirmado' || app.paymentStatus === 'Verificado y Aprobado' ? 'Confirmado' : 'Pendiente'}
                         </span>
                       </div>
 
@@ -2771,23 +3043,33 @@ export default function App() {
                           <span className="text-slate-400 flex items-center gap-1">
                             <Receipt className="w-3 h-3 text-clinic-emerald" /> Voucher:
                           </span>
-                          <span className="font-bold text-slate-800 bg-white px-2 py-0.5 rounded-md border border-slate-200 text-[11px] truncate max-w-[180px]">
-                            {app.voucherRef || 'Sin comprobante'}
-                          </span>
+                          {app.voucherImage ? (
+                            <button
+                              type="button"
+                              onClick={() => setViewingVoucherModal(app)}
+                              className="font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-300 text-[11px] flex items-center gap-1 cursor-pointer transition-all"
+                            >
+                              <ImageIcon className="w-3 h-3 text-emerald-600" /> Ver Captura QR
+                            </button>
+                          ) : (
+                            <span className="font-bold text-slate-800 bg-white px-2 py-0.5 rounded-md border border-slate-200 text-[11px] truncate max-w-[180px]">
+                              {app.voucherRef || 'Sin comprobante'}
+                            </span>
+                          )}
                         </div>
                       </div>
 
                       <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2">
-                        {app.paymentStatus !== 'Verificado y Aprobado' ? (
+                        {app.paymentStatus !== 'Confirmado' && app.paymentStatus !== 'Verificado y Aprobado' ? (
                           <button
                             onClick={() => handleAdminVerifyPayment(app.id)}
                             className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer text-center"
                           >
-                            ✓ Aprobar Pago y Ficha
+                            ✓ Aprobar Pago
                           </button>
                         ) : (
                           <span className="w-full py-1.5 text-xs text-emerald-700 font-bold bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Pago Verificado
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Pago Confirmado
                           </span>
                         )}
                       </div>
@@ -2811,7 +3093,7 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
-                      {appointments.map((app) => (
+                      {sortedAdminAppointments.map((app) => (
                         <tr key={app.id} className="hover:bg-slate-50/70 transition-colors">
                           <td className="py-3 px-3 font-extrabold text-clinic-dark whitespace-nowrap">
                             {app.id}
@@ -2829,10 +3111,22 @@ export default function App() {
                             <span className="block text-[11px] text-slate-400">{app.date}</span>
                           </td>
                           <td className="py-3 px-3">
-                            <span className="inline-flex items-center gap-1 font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-lg text-[11px]">
-                              <Receipt className="w-3 h-3 text-clinic-emerald" />
-                              {app.voucherRef || 'Sin comprobante'}
-                            </span>
+                            {app.voucherImage ? (
+                              <button
+                                type="button"
+                                onClick={() => setViewingVoucherModal(app)}
+                                className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg text-[11px] border border-emerald-300 shadow-sm cursor-pointer transition-all"
+                                title="Ver comprobante subido"
+                              >
+                                <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Ver Comprobante</span>
+                              </button>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-lg text-[11px]">
+                                <Receipt className="w-3 h-3 text-clinic-emerald" />
+                                {app.voucherRef || 'Sin comprobante'}
+                              </span>
+                            )}
                           </td>
                           <td className="py-3 px-3 whitespace-nowrap">
                             <span className="font-extrabold text-slate-900 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
@@ -2841,24 +3135,24 @@ export default function App() {
                           </td>
                           <td className="py-3 px-3 whitespace-nowrap">
                             <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                              app.paymentStatus === 'Verificado y Aprobado'
+                              app.paymentStatus === 'Confirmado' || app.paymentStatus === 'Verificado y Aprobado'
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : 'bg-amber-100 text-amber-800 animate-pulse'
                             }`}>
-                              {app.paymentStatus || 'Pendiente de Verificación'}
+                              {app.paymentStatus === 'Confirmado' || app.paymentStatus === 'Verificado y Aprobado' ? 'Confirmado' : 'Pendiente'}
                             </span>
                           </td>
                           <td className="py-3 px-3 text-right whitespace-nowrap">
-                            {app.paymentStatus !== 'Verificado y Aprobado' ? (
+                            {app.paymentStatus !== 'Confirmado' && app.paymentStatus !== 'Verificado y Aprobado' ? (
                               <button
                                 onClick={() => handleAdminVerifyPayment(app.id)}
-                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg shadow-sm transition-all cursor-pointer"
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-xl shadow-sm transition-all cursor-pointer"
                               >
                                 ✓ Aprobar Pago
                               </button>
                             ) : (
                               <span className="text-[11px] text-emerald-600 font-bold flex items-center justify-end gap-1">
-                                <CheckCircle2 className="w-3.5 h-3.5" /> Aprobado
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Confirmado
                               </span>
                             )}
                           </td>
@@ -3133,6 +3427,7 @@ export default function App() {
                 onChange={(e) => setSelectedDoctorId(e.target.value)}
                 className="bg-white px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-clinic-dark focus:outline-none focus:ring-2 focus:ring-clinic-emerald"
               >
+                <option value="all">👨‍⚕️ Todos los Médicos / Agenda General</option>
                 {specialtiesList.map(s => (
                   <option key={s.doctor} value={s.doctor}>{s.doctor} ({s.name})</option>
                 ))}
@@ -3667,6 +3962,11 @@ export default function App() {
                             if (file) {
                               setVoucherFileName(file.name);
                               if (voucherError) setVoucherError('');
+                              const reader = new FileReader();
+                              reader.onload = (uploadEvent) => {
+                                setVoucherImageBase64(uploadEvent.target.result);
+                              };
+                              reader.readAsDataURL(file);
                             }
                           }}
                           className="hidden"
@@ -3712,6 +4012,66 @@ export default function App() {
       {/* ========================================================
           MODAL ÉXITO DE RESERVA (TICKET CON GUÍA DE UBICACIÓN)
          ======================================================== */}
+            {/* MODAL PARA VER EL COMPROBANTE / VOUCHER QR SUBIDO */}
+      {viewingVoucherModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-5 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="font-extrabold text-sm sm:text-base text-slate-900">
+                  Comprobante de Pago • Ficha {viewingVoucherModal.id}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {viewingVoucherModal.patientName} • Bs. {viewingVoucherModal.price || 150}
+                </p>
+              </div>
+              <button
+                onClick={() => setViewingVoucherModal(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] overflow-y-auto flex items-center justify-center bg-slate-100 rounded-2xl p-2 border border-slate-200">
+              {viewingVoucherModal.voucherImage ? (
+                <img 
+                  src={viewingVoucherModal.voucherImage} 
+                  alt="Comprobante de Pago" 
+                  className="max-h-[55vh] max-w-full object-contain rounded-xl shadow-sm"
+                />
+              ) : (
+                <div className="p-8 text-center text-slate-400 space-y-2">
+                  <Receipt className="w-10 h-10 mx-auto text-slate-300" />
+                  <p className="text-xs font-bold">{viewingVoucherModal.voucherRef || 'Comprobante Registrado'}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 flex justify-between gap-3">
+              {viewingVoucherModal.paymentStatus !== 'Confirmado' && viewingVoucherModal.paymentStatus !== 'Verificado y Aprobado' && (
+                <button
+                  onClick={() => {
+                    handleAdminVerifyPayment(viewingVoucherModal.id);
+                    setViewingVoucherModal(null);
+                  }}
+                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Aprobar Pago</span>
+                </button>
+              )}
+              <button
+                onClick={() => setViewingVoucherModal(null)}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {bookingSuccessModal && (
         <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
           <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-emerald-200 text-center space-y-4 animate-slide-up">
