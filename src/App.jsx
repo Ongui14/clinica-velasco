@@ -138,6 +138,7 @@ const ARRIVAL_TIMES = [
 ];
 
 const LOCAL_STORAGE_USER_KEY = 'clinica_velasco_paciente';
+const LOCAL_STORAGE_PACIENTE_SESION_KEY = 'velasco_paciente_sesion';
 const LOCAL_STORAGE_CITAS_KEY = 'clinica_velasco_citas';
 const LOCAL_STORAGE_SPECIALTIES_KEY = 'clinica_velasco_especialidades';
 const LOCAL_STORAGE_EMERGENCY_ALERTS_KEY = 'clinica_velasco_alertas_emergencia';
@@ -692,11 +693,23 @@ export default function App() {
   // Patient Navigation views: 'inicio' | 'turnos' | 'emergencia'
   const [activeTab, setActiveTab] = useState('inicio');
 
-  // User Profile state (Paciente)
+  // User Profile state (Paciente con Sesión Persistente Fricción Cero)
   const [userProfile, setUserProfile] = useState(() => {
     try {
+      const savedSesion = localStorage.getItem(LOCAL_STORAGE_PACIENTE_SESION_KEY);
+      if (savedSesion) {
+        const parsed = JSON.parse(savedSesion);
+        const name = parsed.nombre || parsed.name || '';
+        const phone = parsed.celular || parsed.phone || '';
+        if (name && phone) return { name, phone };
+      }
       const saved = localStorage.getItem(LOCAL_STORAGE_USER_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const name = parsed.nombre || parsed.name || '';
+        const phone = parsed.celular || parsed.phone || '';
+        if (name && phone) return { name, phone };
+      }
     } catch (e) {}
     return null;
   });
@@ -866,13 +879,33 @@ export default function App() {
     } catch (e) {}
   }, [appointments]);
 
-  // Sync user profile to localStorage
+  // Auto-ingreso (Bypass de pantalla inicial) al montar
+  useEffect(() => {
+    try {
+      const savedSesion = localStorage.getItem(LOCAL_STORAGE_PACIENTE_SESION_KEY);
+      if (savedSesion) {
+        const parsed = JSON.parse(savedSesion);
+        const name = parsed.nombre || parsed.name || '';
+        const phone = parsed.celular || parsed.phone || '';
+        if (name && phone) {
+          setUserProfile({ name, phone });
+        }
+      }
+    } catch (e) {}
+  }, []);
+
+  // Sync user profile to localStorage bajo velasco_paciente_sesion y LOCAL_STORAGE_USER_KEY
   useEffect(() => {
     try {
       if (userProfile) {
         localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(userProfile));
+        localStorage.setItem(LOCAL_STORAGE_PACIENTE_SESION_KEY, JSON.stringify({
+          nombre: userProfile.name,
+          celular: userProfile.phone
+        }));
       } else {
         localStorage.removeItem(LOCAL_STORAGE_USER_KEY);
+        localStorage.removeItem(LOCAL_STORAGE_PACIENTE_SESION_KEY);
       }
     } catch (e) {}
   }, [userProfile]);
@@ -1210,16 +1243,25 @@ export default function App() {
       phone: inputPhone.trim()
     };
     try {
+      localStorage.setItem(LOCAL_STORAGE_PACIENTE_SESION_KEY, JSON.stringify({
+        nombre: profile.name,
+        celular: profile.phone
+      }));
       localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(profile));
     } catch (err) {}
     setUserProfile(profile);
   };
 
   const handleLogout = () => {
+    try {
+      localStorage.removeItem(LOCAL_STORAGE_PACIENTE_SESION_KEY);
+      localStorage.removeItem(LOCAL_STORAGE_USER_KEY);
+    } catch (err) {}
     setUserProfile(null);
     setInputName('');
     setInputPhone('');
     setActiveTab('inicio');
+    window.location.reload();
   };
 
   // Open Specialty Booking
@@ -1860,8 +1902,20 @@ export default function App() {
   // Filter appointments for Doctor Panel
   const doctorAppointments = selectedDoctorId === 'all' ? appointments : appointments.filter(a => !selectedDoctorId || a.doctor === selectedDoctorId);
 
-  // Turnos para el Paciente: muestra turnos pendientes o aquellos completados con Receta Médica emitida para descargar
+  // Turnos para el Paciente: Vinculación estricta al perfil del paciente activo (filtrado por celular o nombre)
   const activePatientAppointments = appointments.filter(app => {
+    if (!userProfile) return false;
+
+    const userPhoneClean = (userProfile.phone || '').replace(/[^0-9]/g, '');
+    const userNameLower = (userProfile.name || '').toLowerCase().trim();
+    const appPhoneClean = (app.patientPhone || '').replace(/[^0-9]/g, '');
+    const appNameLower = (app.patientName || '').toLowerCase().trim();
+
+    const matchesPhone = Boolean(userPhoneClean && appPhoneClean && (userPhoneClean === appPhoneClean || userPhoneClean.endsWith(appPhoneClean) || appPhoneClean.endsWith(userPhoneClean)));
+    const matchesName = Boolean(userNameLower && appNameLower && (appNameLower.includes(userNameLower) || userNameLower.includes(appNameLower)));
+
+    if (!matchesPhone && !matchesName) return false;
+
     const s = (app.status || '').toLowerCase().trim();
     const e = (app.estado || '').toLowerCase().trim();
     if (app.prescriptionText) return true; // Citas con receta disponible para descarga
@@ -1968,8 +2022,19 @@ export default function App() {
             <VelascoLogo iconOnly={false} className="h-8 sm:h-10" />
           </div>
 
-          {/* Header Right Actions: Únicamente Acceso Personal */}
+          {/* Header Right Actions: Únicamente Acceso Personal y Salir */}
           <div className="flex items-center gap-2 shrink-0">
+            {systemRole === 'paciente' && userProfile && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all cursor-pointer text-xs"
+                title="Cerrar sesión"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden md:inline text-[11px] font-medium">Salir</span>
+              </button>
+            )}
             
             {/* Botón Selector de Rol / Modo Personal Clínico */}
             <button
@@ -2224,11 +2289,13 @@ export default function App() {
                 </div>
 
                 <button
+                  type="button"
                   onClick={handleLogout}
-                  className="self-start sm:self-center inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-xl border border-red-200/80 transition-colors shadow-soft-sm cursor-pointer"
+                  className="self-start sm:self-center inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-xl border border-transparent hover:border-red-200 transition-all cursor-pointer"
+                  title="Cerrar sesión en este dispositivo"
                 >
                   <LogOut className="w-3.5 h-3.5" />
-                  <span>Salir</span>
+                  <span className="text-[11px] font-medium">Cerrar sesión</span>
                 </button>
               </div>
 
@@ -2589,9 +2656,20 @@ export default function App() {
                   </p>
                 </div>
 
-                <span className="text-xs font-black px-3 py-1 rounded-full bg-clinic-light text-clinic-dark">
-                  {activePatientAppointments.length} Cita{activePatientAppointments.length === 1 ? '' : 's'} Activa{activePatientAppointments.length === 1 ? '' : 's'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black px-3 py-1 rounded-full bg-clinic-light text-clinic-dark">
+                    {activePatientAppointments.length} Cita{activePatientAppointments.length === 1 ? '' : 's'} Activa{activePatientAppointments.length === 1 ? '' : 's'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 sm:px-2.5 sm:py-1 rounded-xl transition-all cursor-pointer"
+                    title="Cerrar sesión en este dispositivo"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline font-medium">Cerrar sesión</span>
+                  </button>
+                </div>
               </div>
 
               {activePatientAppointments.length === 0 ? (
