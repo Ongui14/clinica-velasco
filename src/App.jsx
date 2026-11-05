@@ -512,7 +512,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
   };
 
   return (
-    <div className="relative w-full h-full bg-slate-900 rounded-xl overflow-hidden">
+    <div className="relative w-full h-[60vh] min-h-[450px] lg:h-[75vh] bg-slate-900 rounded-xl overflow-hidden shrink-0 block">
       {/* Video Remoto SIEMPRE MONTADO en el DOM con reproducción inline */}
       <video
         ref={remoteVideoRef}
@@ -597,7 +597,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
       )}
 
       {/* Barra Flotante de Controles Nativos de Clínica Velasco */}
-      <div className="absolute bottom-12 left-0 right-0 flex justify-center items-center gap-6 z-50">
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center justify-center gap-4 z-50">
         {/* Botón Micrófono */}
         <button
           type="button"
@@ -4422,22 +4422,21 @@ export default function App() {
 
             {/* Contenedor Principal (Pantalla dividida en modo médico / pantalla completa en modo paciente) */}
             <div className="relative flex-1 w-full h-full bg-slate-950 overflow-y-auto p-2 sm:p-4">
-              <div className="flex flex-col xl:flex-row w-full gap-4">
+              <div className="flex flex-col lg:flex-row w-full gap-4">
                 
-                {/* Bloque del Video (Pantalla Completa en Móviles) */}
-                <div className="relative w-full h-[95dvh] xl:h-[75vh] bg-slate-900 rounded-xl overflow-hidden shrink-0 flex-none">
-                  <WebRTCVideoCall
-                    activeVideoCall={activeVideoCall}
-                    systemRole={systemRole}
-                    onClose={() => {
-                      setActiveVideoCall(null);
-                    }}
-                  />
-                </div>
+                {/* Bloque del Video */}
+                <WebRTCVideoCall
+                  activeVideoCall={activeVideoCall}
+                  systemRole={systemRole}
+                  onClose={() => {
+                    setActiveVideoCall(null);
+                  }}
+                />
 
-                {/* Bloque del Recetario (Below the fold) */}
+                {/* Bloque del Recetario */}
                 {systemRole === 'medico' && (
-                  <div className="w-full xl:w-1/3 flex-none bg-slate-900 rounded-2xl border border-slate-800 p-4 sm:p-5 flex flex-col justify-between space-y-4">
+                  <div className="w-full lg:w-1/3 mt-6 lg:mt-0">
+                    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 sm:p-5 flex flex-col justify-between space-y-4">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                       <div className="flex items-center gap-2">
@@ -4493,6 +4492,7 @@ export default function App() {
                     <p className="text-[10px] text-slate-400 text-center">
                       Guarda la receta en el expediente y habilita la descarga inmediata al paciente.
                     </p>
+                    </div>
                   </div>
                 </div>
               )}
