@@ -484,20 +484,18 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
   };
 
   return (
-    <div className="relative w-full h-[50vh] min-h-[350px] md:h-[600px] bg-black rounded-xl overflow-hidden shadow-lg flex items-center justify-center">
+    <div className="relative w-full h-[65vh] min-h-[400px] md:h-[600px] bg-slate-900 rounded-xl overflow-hidden shadow-2xl">
       {/* Video Remoto SIEMPRE MONTADO en el DOM con reproducción inline */}
       <video
         ref={remoteVideoRef}
         autoPlay
         playsInline
-        className={`w-full h-full object-cover transition-opacity duration-500 ${
-          hasRemoteVideo ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
+        className="absolute inset-0 w-full h-full object-cover z-0"
       />
 
       {/* PANTALLA DE ESPERA CORPORATIVA INTEGRADA (Visible mientras no haya video remoto conectado) */}
       {!hasRemoteVideo && (
-        <div className="absolute inset-0 z-20 bg-slate-950 flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 z-10 px-4 text-center">
           <div className="max-w-md w-full mx-auto space-y-6 flex flex-col items-center">
             
             {/* Isotipo de la Clínica: Círculo verde con iniciales CV y Cruz médica */}
@@ -549,13 +547,13 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
 
       {/* Video Local en Recuadro Flotante (Picture-in-Picture en esquina inferior derecha) */}
       {localStream && (
-        <div className="absolute top-4 right-4 w-24 h-36 md:w-32 md:h-48 bg-gray-800 rounded-xl overflow-hidden border-2 border-emerald-500 shadow-xl z-20 object-cover group">
+        <div className="absolute top-4 right-4 w-24 h-36 sm:w-28 sm:h-40 bg-black rounded-lg overflow-hidden border-2 border-emerald-500 shadow-xl z-20">
           <video
             ref={localVideoRef}
             autoPlay
             playsInline
             muted
-            className="w-full h-full object-cover transform -scale-x-100"
+            className="w-full h-full object-cover"
           />
           {isVideoMuted && (
             <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center text-slate-400 gap-1">
@@ -571,12 +569,12 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
       )}
 
       {/* Barra Flotante de Controles Nativos de Clínica Velasco */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-3 z-30 bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-full shadow-2xl border border-slate-700/60">
+      <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center gap-4 z-30 pointer-events-none">
         {/* Activar / Silenciar Micrófono */}
         <button
           type="button"
           onClick={toggleMic}
-          className={`p-2.5 sm:p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${
+          className={`pointer-events-auto p-2.5 sm:p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${
             isMicMuted 
               ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/40' 
               : 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-600'
@@ -590,7 +588,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
         <button
           type="button"
           onClick={toggleVideo}
-          className={`p-2.5 sm:p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${
+          className={`pointer-events-auto p-2.5 sm:p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${
             isVideoMuted 
               ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/40' 
               : 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-600'
@@ -604,7 +602,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
         <button
           type="button"
           onClick={handleHangUp}
-          className="px-3.5 py-2.5 sm:px-4 sm:py-3 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-red-900/40"
+          className="pointer-events-auto px-3.5 py-2.5 sm:px-4 sm:py-3 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-red-900/40"
           title="Colgar y salir de la teleconsulta"
         >
           <PhoneOff className="w-5 h-5" />
