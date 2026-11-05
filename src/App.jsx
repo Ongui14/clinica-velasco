@@ -512,7 +512,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
   };
 
   return (
-    <div className="relative w-full h-[85vh] md:h-[75vh] bg-slate-900 rounded-b-xl md:rounded-xl overflow-hidden flex-shrink-0">
+    <div className="relative w-full h-full bg-slate-900 rounded-xl overflow-hidden">
       {/* Video Remoto SIEMPRE MONTADO en el DOM con reproducción inline */}
       <video
         ref={remoteVideoRef}
@@ -575,7 +575,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
 
       {/* Video Local en Recuadro Flotante (Picture-in-Picture en esquina inferior derecha) */}
       {localStream && (
-        <div className="absolute top-3 right-3 w-20 h-28 sm:w-28 sm:h-40 bg-black rounded-lg overflow-hidden border-2 border-emerald-500 shadow-xl z-40">
+        <div className="absolute top-4 right-4 w-24 h-36 bg-black rounded-lg overflow-hidden border-2 border-emerald-500 shadow-xl z-40">
           <video
             ref={localVideoRef}
             autoPlay
@@ -597,7 +597,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
       )}
 
       {/* Barra Flotante de Controles Nativos de Clínica Velasco */}
-      <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-4 z-50">
+      <div className="absolute bottom-12 left-0 right-0 flex justify-center items-center gap-6 z-50">
         {/* Botón Micrófono */}
         <button
           type="button"
@@ -4421,22 +4421,23 @@ export default function App() {
             </div>
 
             {/* Contenedor Principal (Pantalla dividida en modo médico / pantalla completa en modo paciente) */}
-            <div className="relative flex-1 w-full h-full bg-slate-950 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row">
-              
-              {/* Columna Izquierda: Video WebRTC Nativo con PeerJS */}
-              <div className="relative flex-1 w-full bg-slate-950 overflow-hidden flex flex-col items-center justify-center p-2 sm:p-3">
-                <WebRTCVideoCall
-                  activeVideoCall={activeVideoCall}
-                  systemRole={systemRole}
-                  onClose={() => {
-                    setActiveVideoCall(null);
-                  }}
-                />
-              </div>
+            <div className="relative flex-1 w-full h-full bg-slate-950 overflow-y-auto p-2 sm:p-4">
+              <div className="flex flex-col xl:flex-row w-full gap-4">
+                
+                {/* Bloque del Video (Pantalla Completa en Móviles) */}
+                <div className="relative w-full h-[95dvh] xl:h-[75vh] bg-slate-900 rounded-xl overflow-hidden shrink-0 flex-none">
+                  <WebRTCVideoCall
+                    activeVideoCall={activeVideoCall}
+                    systemRole={systemRole}
+                    onClose={() => {
+                      setActiveVideoCall(null);
+                    }}
+                  />
+                </div>
 
-              {/* Columna Derecha del Médico: Módulo de Prescripción Médica y Emisión en Vivo */}
-              {systemRole === 'medico' && (
-                <div className="w-full lg:w-96 bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-800 p-4 sm:p-5 flex flex-col justify-between shrink-0 overflow-y-auto space-y-4">
+                {/* Bloque del Recetario (Below the fold) */}
+                {systemRole === 'medico' && (
+                  <div className="w-full xl:w-1/3 flex-none bg-slate-900 rounded-2xl border border-slate-800 p-4 sm:p-5 flex flex-col justify-between space-y-4">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                       <div className="flex items-center gap-2">
@@ -4496,6 +4497,7 @@ export default function App() {
                 </div>
               )}
 
+              </div>
             </div>
 
           </div>
