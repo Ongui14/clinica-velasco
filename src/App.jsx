@@ -1035,18 +1035,24 @@ export default function App() {
   const syncConnectionsRef = useRef([]);
   const hubConnectionRef = useRef(null);
 
-  // Escuchar eventos de storage para sincronizar pestañas en el mismo navegador
+  // Sincronización en vivo para el Paciente y personal (escucha 'storage' de window)
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === LOCAL_STORAGE_CITAS_KEY && e.newValue) {
+      if (!e || !e.key || e.key === LOCAL_STORAGE_CITAS_KEY) {
         try {
-          const parsed = JSON.parse(e.newValue);
-          if (Array.isArray(parsed)) {
-            setAppointments(parsed);
+          const raw = (e && e.newValue) ? e.newValue : localStorage.getItem(LOCAL_STORAGE_CITAS_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              setAppointments(parsed);
+            }
           }
-        } catch (err) {}
+        } catch (err) {
+          console.warn('Error sincronizando storage:', err);
+        }
       }
     };
+
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
@@ -1055,6 +1061,10 @@ export default function App() {
   const broadcastSyncAppointments = (updatedList) => {
     try {
       localStorage.setItem(LOCAL_STORAGE_CITAS_KEY, JSON.stringify(updatedList));
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: LOCAL_STORAGE_CITAS_KEY,
+        newValue: JSON.stringify(updatedList)
+      }));
     } catch (e) {}
 
     // Si somos Hub, enviar a todos los clientes conectados
@@ -1744,8 +1754,8 @@ export default function App() {
     }));
   };
 
-  // Función centralizada para generar y descargar la Receta Médica en PDF con Isotipo (jsPDF)
-  const handleGeneratePrescriptionPDF = (ticket) => {
+  // Función de descarga de receta médica corporativa (jsPDF) para el paciente y médico
+  const descargarRecetaPaciente = (cita) => {
     try {
       const doc = new jsPDF({
         orientation: 'portrait',
@@ -1753,14 +1763,14 @@ export default function App() {
         format: 'a4'
       });
 
-      const todayStr = ticket.prescriptionDate || new Date().toLocaleDateString('es-ES', {
+      const todayStr = cita.fecha || cita.prescriptionDate || cita.date || new Date().toLocaleDateString('es-ES', {
         day: '2-digit',
         month: 'long',
         year: 'numeric'
       });
 
       // 1. Membrete e Isotipo: En la esquina superior izquierda del PDF
-      // Dibuja el Isotipo verde esmeralda con texto 'CV' en color blanco y negrita
+      // Fondo blanco del documento con círculo esmeralda e isotipo "CV" en blanco y negrita
       doc.setFillColor(16, 185, 129);
       doc.circle(28, 22, 10, 'F');
 
@@ -1769,7 +1779,7 @@ export default function App() {
       doc.setFontSize(14);
       doc.text('CV', 28, 26.5, { align: 'center' });
 
-      // Al lado del logo, escribe "CLÍNICA VELASCO" (fuente grande) y "Servicio de Telemedicina" (fuente más pequeña)
+      // Cabecera: "CLÍNICA VELASCO - Servicio de Telemedicina"
       doc.setTextColor(15, 23, 42);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(18);
@@ -1791,35 +1801,37 @@ export default function App() {
       doc.setLineWidth(0.5);
       doc.line(20, 36, 190, 36);
 
-      // 2. Datos del Paciente: Sección limpia con Ficha, Paciente y Fecha
+      // 2. Datos: "Paciente: " + cita.nombrePaciente (o nombreMenor), "Ficha: " + cita.id, "Fecha: " + cita.fecha
       doc.setFillColor(248, 250, 252);
       doc.setDrawColor(226, 232, 240);
       doc.roundedRect(20, 42, 170, 26, 3, 3, 'FD');
 
-      const patientName = ticket.beneficiaryName 
-        ? `${ticket.patientName} (Beneficiario / Menor: ${ticket.beneficiaryName})` 
-        : (ticket.patientName || 'No registrado');
+      const patientName = cita.nombreMenor 
+        ? `${cita.nombrePaciente || cita.patientName} (Menor: ${cita.nombreMenor})` 
+        : cita.beneficiaryName 
+        ? `${cita.patientName || cita.nombrePaciente} (Beneficiario / Menor: ${cita.beneficiaryName})` 
+        : (cita.nombrePaciente || cita.patientName || 'No registrado');
+
+      const doctorName = cita.medico || cita.doctor || 'Dr. Alejandro Velasco';
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.setTextColor(15, 23, 42);
-      doc.text(`Ficha: ${ticket.id}`, 26, 50);
+      doc.text(`Ficha: ${cita.id}`, 26, 50);
       doc.text(`Paciente: ${patientName}`, 26, 60);
 
       doc.text(`Fecha: ${todayStr}`, 125, 50);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9.5);
       doc.setTextColor(71, 85, 105);
-      const doctorName = ticket.doctor || 'Dr. Alejandro Velasco';
       doc.text(`Médico: ${doctorName}`, 125, 60);
 
-      // 3. Cuerpo: Imprime el prescriptionText respetando los saltos de línea
+      // 3. Cuerpo de la receta: cita.prescriptionText (usando doc.text con splitTextToSize)
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
       doc.setTextColor(16, 185, 129);
       doc.text('Rp / PRESCRIPCIÓN MÉDICA E INDICACIONES:', 20, 78);
 
-      // Marco contenedor para el cuerpo de la receta
       doc.setDrawColor(203, 213, 225);
       doc.setLineWidth(0.4);
       doc.rect(20, 82, 170, 125);
@@ -1828,61 +1840,56 @@ export default function App() {
       doc.setFontSize(10.5);
       doc.setTextColor(15, 23, 42);
 
-      const prescriptionText = ticket.prescriptionText || 
+      const prescriptionText = cita.prescriptionText || 
         '1. Medicación preventiva e hidratación según tolerancia.\n2. Reposo relativo por 48 horas.\n3. Control y reevaluación médica si persisten síntomas.';
 
-      // doc.splitTextToSize divide el texto respetando los saltos de línea y el ancho
       const splitText = doc.splitTextToSize(prescriptionText, 160);
       doc.text(splitText, 25, 92);
 
-      // 4. Firma Digital: En el tercio inferior del PDF, línea horizontal corta centrada
+      // 4. Pie de página: Línea de firma, "Firma Digital Validada" y nombre del Médico (cita.medico)
       const lineY = 248;
       const lineStartX = 75;
       const lineEndX = 135;
 
-      // Arriba de la línea, fuente cursiva (itálica/Times) grande simulando una firma real
       doc.setTextColor(15, 76, 129);
       doc.setFont('times', 'bolditalic');
       doc.setFontSize(18);
-      doc.text('Dr. Alejandro Velasco', 105, lineY - 4, { align: 'center' });
+      doc.text(doctorName, 105, lineY - 4, { align: 'center' });
 
-      // Línea horizontal corta centrada
       doc.setDrawColor(100, 116, 139);
       doc.setLineWidth(0.5);
       doc.line(lineStartX, lineY, lineEndX, lineY);
 
-      // Debajo de la línea: "Dr. Alejandro Velasco", "Especialidad: Cirugía", "Firma Digital Validada"
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9.5);
       doc.setTextColor(15, 23, 42);
-      doc.text('Dr. Alejandro Velasco', 105, lineY + 6, { align: 'center' });
+      doc.text(doctorName, 105, lineY + 6, { align: 'center' });
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8.5);
       doc.setTextColor(71, 85, 105);
-      doc.text('Especialidad: Cirugía', 105, lineY + 11, { align: 'center' });
+      doc.text(`Especialidad: ${cita.specialty || cita.especialidad || 'Consulta Médica'}`, 105, lineY + 11, { align: 'center' });
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
       doc.setTextColor(16, 185, 129);
       doc.text('Firma Digital Validada', 105, lineY + 16, { align: 'center' });
 
-      // Pie de página oficial
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(148, 163, 184);
       doc.text('Clínica Velasco • Servicio Oficial de Telemedicina • Documento Digital Emitido', 105, 282, { align: 'center' });
 
-      // Guardar y descargar automáticamente
-      const fileName = `Receta-Clinica-Velasco-${ticket.id}.pdf`;
-      doc.save(fileName);
+      // Finaliza con doc.save('Receta_Medica_CV.pdf')
+      doc.save('Receta_Medica_CV.pdf');
     } catch (error) {
       console.error('Error al generar la receta PDF:', error);
       alert('Ocurrió un error al generar la receta en PDF. Por favor intenta de nuevo.');
     }
   };
 
-  const generatePrescriptionPDF = handleGeneratePrescriptionPDF;
+  const handleGeneratePrescriptionPDF = descargarRecetaPaciente;
+  const generatePrescriptionPDF = descargarRecetaPaciente;
 
   // Función para emitir la receta, finalizar la consulta y bloquear la sala
   const emitirReceta = (ticketId) => {
@@ -1955,7 +1962,8 @@ export default function App() {
     const e = (app.estado || '').toLowerCase().trim();
     if (app.prescriptionText) return true; // Citas con receta disponible para descarga
     if (s === 'completado' || e === 'completado') return true; // Mantener visible para descarga de receta
-    return s !== 'atendido' && s !== 'atendida';
+    if (s === 'atendido' || e === 'atendido') return true; // Mantener visible para descarga de receta
+    return true;
   });
 
   // Helper para clasificar citas según el periodo seleccionado en Caja / Admin
@@ -2731,7 +2739,9 @@ export default function App() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {activePatientAppointments.map((ticket) => (
+                  {activePatientAppointments.map((ticket) => {
+                    const cita = ticket;
+                    return (
                     <div
                       key={ticket.id}
                       className="bg-white rounded-3xl border border-slate-200/90 shadow-xl shadow-emerald-950/5 overflow-hidden flex flex-col justify-between transition-all hover:shadow-2xl hover:shadow-emerald-900/10"
@@ -2838,20 +2848,17 @@ export default function App() {
 
                         {/* Botón de Videoconsulta o Descarga de Receta Médica */}
                         <div>
-                          {ticket.estado === 'Completado' || ticket.status === 'Completado' || ticket.prescriptionText ? (
-                            <button
-                              type="button"
-                              onClick={() => handleGeneratePrescriptionPDF(ticket)}
-                              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 active:scale-[0.99] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/20 transition-all cursor-pointer group"
-                              title="Descargar Receta Médica oficial en formato PDF"
-                            >
-                              <FileText className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                              <span>📄 Descargar Receta Médica</span>
+                          {cita.estado === 'Atendido' || cita.estado === 'Completado' || cita.status === 'Atendido' || cita.status === 'Completado' || cita.prescriptionText ? (
+                            <button 
+                              onClick={() => descargarRecetaPaciente(cita)} 
+                              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
+                            > 
+                              📄 Descargar Receta Médica 
                             </button>
-                          ) : (
+                          ) : (cita.estado === 'Confirmado' || cita.paymentStatus === 'Confirmado' || cita.paymentStatus === 'Verificado y Aprobado' || cita.status === 'Confirmado' || cita.status === 'Programado' || !cita.estado) && (
                             <button
                               type="button"
-                              onClick={() => handleOpenVideoCall(ticket)}
+                              onClick={() => handleOpenVideoCall(cita)}
                               className="w-full py-3 px-4 rounded-2xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-teal-900/20 transition-all cursor-pointer group"
                               title="Haz clic para ingresar a la sala de videoconsulta médica"
                             >
@@ -2892,7 +2899,8 @@ export default function App() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               )}
             </div>
