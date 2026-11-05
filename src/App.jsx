@@ -196,10 +196,20 @@ function getSpecialtyIcon(iconName, className = "w-6 h-6") {
   }
 }
 
+const DOCTOR_PEER_ID = "clinica-velasco-host-medico-activo";
+const peerConfig = {
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+  }
+};
+
 // Componente de Sala de Videoconsulta Nativa WebRTC con PeerJS
 function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
   const [localStream, setLocalStream] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
+  const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
 
@@ -208,39 +218,162 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
   const peerRef = useRef(null);
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
+  const isConnectedRef = useRef(false);
   const callIntervalRef = useRef(null);
+  const retryTimeoutRef = useRef(null);
 
   const cita = activeVideoCall;
   const isDoctor = systemRole === 'medico';
-  const myPeerId = isDoctor ? `velasco-doc-${cita.id}` : `velasco-pac-${cita.id}`;
-  const targetId = isDoctor ? `velasco-pac-${cita.id}` : `velasco-doc-${cita.id}`;
 
   // Sincronizar stream local con el elemento <video>
   useEffect(() => {
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
+      localVideoRef.current.play().catch(() => {});
     }
   }, [localStream]);
-
-  // Sincronizar stream remoto con el elemento <video>
-  useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-    }
-  }, [remoteStream]);
 
   // Inicializar WebRTC y PeerJS
   useEffect(() => {
     let isMounted = true;
+    isConnectedRef.current = false;
 
-    const handleRemoteStream = (incomingRemoteStream) => {
-      if (!isMounted || !incomingRemoteStream) return;
-      remoteStreamRef.current = incomingRemoteStream;
-      setRemoteStream(incomingRemoteStream);
+    const handleRemoteStream = (remoteStream) => {
+      if (!isMounted || !remoteStream) return;
+      isConnectedRef.current = true;
+      remoteStreamRef.current = remoteStream;
+
       if (callIntervalRef.current) {
         clearInterval(callIntervalRef.current);
         callIntervalRef.current = null;
       }
+
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch(() => {});
+      }
+
+      setHasRemoteVideo(true);
+    };
+
+    // Helper para inicializar Peer en modo MÉDICO (Host permanente de la sala)
+    const initDoctorPeer = (stream) => {
+      if (!isMounted) return;
+      if (peerRef.current) {
+        try { peerRef.current.destroy(); } catch (e) {}
+        peerRef.current = null;
+      }
+
+      const peer = new Peer(DOCTOR_PEER_ID, peerConfig);
+      peerRef.current = peer;
+
+      peer.on('open', (id) => {
+        console.log('Doctor Peer activo en sala:', id);
+      });
+
+      // El médico no llama, solo responde llamadas entrantes automáticamente
+      peer.on('call', (incomingCall) => {
+        incomingCall.answer(stream);
+        incomingCall.on('stream', (rStream) => {
+          handleRemoteStream(rStream);
+        });
+        incomingCall.on('close', () => {
+          if (isMounted) {
+            isConnectedRef.current = false;
+            remoteStreamRef.current = null;
+            setHasRemoteVideo(false);
+          }
+        });
+        incomingCall.on('error', () => {});
+      });
+
+      peer.on('error', (err) => {
+        if (err.type === 'unavailable-id') {
+          // Si el ID está ocupado temporalmente (recarga rápida de página), reintentar en 2 segundos
+          if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+          retryTimeoutRef.current = setTimeout(() => {
+            if (isMounted && localStreamRef.current) {
+              initDoctorPeer(localStreamRef.current);
+            }
+          }, 2000);
+          return;
+        }
+        if (err.type === 'peer-unavailable') {
+          return;
+        }
+        console.warn('Doctor Peer WebRTC status:', err.type, err.message);
+      });
+    };
+
+    // Helper para inicializar Peer en modo PACIENTE (Caller con ID aleatorio)
+    const initPatientPeer = (stream) => {
+      if (!isMounted) return;
+      if (peerRef.current) {
+        try { peerRef.current.destroy(); } catch (e) {}
+        peerRef.current = null;
+      }
+
+      // ID aleatorio automático para evitar colisiones en dispositivos móviles
+      const peer = new Peer(undefined, peerConfig);
+      peerRef.current = peer;
+
+      peer.on('open', (id) => {
+        console.log('Paciente Peer conectado con ID aleatorio:', id);
+
+        const attemptCallToDoctor = () => {
+          if (
+            !isMounted || 
+            isConnectedRef.current || 
+            !peerRef.current || 
+            peerRef.current.destroyed || 
+            !localStreamRef.current
+          ) {
+            return;
+          }
+
+          try {
+            const call = peerRef.current.call(DOCTOR_PEER_ID, localStreamRef.current);
+            if (call) {
+              call.on('stream', (rStream) => {
+                handleRemoteStream(rStream);
+              });
+              call.on('close', () => {
+                if (isMounted) {
+                  isConnectedRef.current = false;
+                  remoteStreamRef.current = null;
+                  setHasRemoteVideo(false);
+                }
+              });
+              call.on('error', () => {
+                // Silenciar intentos habituales de reconexión
+              });
+            }
+          } catch (err) {
+            // Silenciar mientras el host médico no esté activo
+          }
+        };
+
+        // Intentar llamada inmediata
+        attemptCallToDoctor();
+
+        // Intervalo cada 2500ms mientras !isConnectedRef.current
+        if (callIntervalRef.current) clearInterval(callIntervalRef.current);
+        callIntervalRef.current = setInterval(() => {
+          if (!isConnectedRef.current) {
+            attemptCallToDoctor();
+          } else if (callIntervalRef.current) {
+            clearInterval(callIntervalRef.current);
+            callIntervalRef.current = null;
+          }
+        }, 2500);
+      });
+
+      peer.on('error', (err) => {
+        if (err.type === 'peer-unavailable') {
+          return;
+        }
+        console.warn('Paciente Peer WebRTC status:', err.type, err.message);
+      });
     };
 
     // 1. Obtener cámara y micrófono local
@@ -253,79 +386,11 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
         localStreamRef.current = stream;
         setLocalStream(stream);
 
-        // 2. Inicializar instancia de PeerJS
-        const peer = new Peer(myPeerId);
-        peerRef.current = peer;
-
-        peer.on('open', () => {
-          // Responder llamadas entrantes de manera automática
-          peer.on('call', (incomingCall) => {
-            incomingCall.answer(stream);
-            incomingCall.on('stream', (rStream) => {
-              handleRemoteStream(rStream);
-            });
-            incomingCall.on('close', () => {
-              if (isMounted) {
-                remoteStreamRef.current = null;
-                setRemoteStream(null);
-              }
-            });
-          });
-
-          // Función para intentar llamar a la contraparte
-          const attemptCall = () => {
-            if (
-              !isMounted || 
-              remoteStreamRef.current || 
-              !peerRef.current || 
-              peerRef.current.destroyed || 
-              !localStreamRef.current
-            ) {
-              return;
-            }
-
-            try {
-              const call = peerRef.current.call(targetId, localStreamRef.current);
-              if (call) {
-                call.on('stream', (rStream) => {
-                  handleRemoteStream(rStream);
-                });
-                call.on('close', () => {
-                  if (isMounted) {
-                    remoteStreamRef.current = null;
-                    setRemoteStream(null);
-                  }
-                });
-                call.on('error', () => {
-                  // Silenciar reintentos habituales mientras la otra parte no se conecta
-                });
-              }
-            } catch (err) {
-              // Silenciar errores durante intentos de conexión
-            }
-          };
-
-          // Intentar llamada inmediata
-          attemptCall();
-
-          // Intervalo cada 3 segundos hasta que haya conexión remota
-          callIntervalRef.current = setInterval(() => {
-            if (!remoteStreamRef.current) {
-              attemptCall();
-            } else if (callIntervalRef.current) {
-              clearInterval(callIntervalRef.current);
-              callIntervalRef.current = null;
-            }
-          }, 3000);
-        });
-
-        peer.on('error', (err) => {
-          // El error 'peer-unavailable' ocurre normalmente mientras la contraparte no ingresa
-          if (err.type === 'peer-unavailable') {
-            return;
-          }
-          console.warn('PeerJS WebRTC status:', err.type, err.message);
-        });
+        if (isDoctor) {
+          initDoctorPeer(stream);
+        } else {
+          initPatientPeer(stream);
+        }
       })
       .catch((err) => {
         console.error('Error al acceder a dispositivos multimedia:', err);
@@ -333,6 +398,11 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
 
     return () => {
       isMounted = false;
+      isConnectedRef.current = false;
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
       if (callIntervalRef.current) {
         clearInterval(callIntervalRef.current);
         callIntervalRef.current = null;
@@ -348,7 +418,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
         peerRef.current = null;
       }
     };
-  }, [myPeerId, targetId]);
+  }, [isDoctor]);
 
   // Controles de Micrófono
   const toggleMic = () => {
@@ -376,6 +446,10 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
 
   // Colgar y Salir
   const handleHangUp = () => {
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
     if (callIntervalRef.current) {
       clearInterval(callIntervalRef.current);
       callIntervalRef.current = null;
@@ -395,16 +469,18 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
 
   return (
     <div className="relative w-full h-full bg-slate-950 overflow-hidden flex items-center justify-center">
-      {/* Video Remoto a Pantalla Completa */}
+      {/* Video Remoto SIEMPRE MONTADO en el DOM con reproducción inline */}
       <video
         ref={remoteVideoRef}
         autoPlay
         playsInline
-        className={`w-full h-full object-cover transition-opacity duration-500 ${remoteStream ? 'opacity-100' : 'opacity-0'}`}
+        className={`w-full h-full object-cover transition-opacity duration-500 ${
+          hasRemoteVideo ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
       />
 
-      {/* PANTALLA DE ESPERA CORPORATIVA INTEGRADA (Visible mientras remoteStream sea null) */}
-      {!remoteStream && (
+      {/* PANTALLA DE ESPERA CORPORATIVA INTEGRADA (Visible mientras no haya video remoto conectado) */}
+      {!hasRemoteVideo && (
         <div className="absolute inset-0 z-20 bg-slate-950 flex flex-col items-center justify-center p-6 text-center animate-fade-in">
           <div className="max-w-md w-full mx-auto space-y-6 flex flex-col items-center">
             
@@ -3874,7 +3950,9 @@ export default function App() {
                         rows={8}
                         value={doctorPrescriptionText}
                         onChange={(e) => setDoctorPrescriptionText(e.target.value)}
-                        placeholder="1. Paracetamol 500mg - 1 comprimido cada 8 horas por 3 días.\n2. Ibuprofeno 400mg si hay dolor agudo.\n3. Reposo e hidratación abundante."
+                        placeholder={`1. Paracetamol 500mg - 1 comprimido cada 8 horas por 3 días.
+2. Ibuprofeno 400mg si hay dolor agudo.
+3. Reposo e hidratación abundante.`}
                         className="w-full p-3 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono resize-none leading-relaxed"
                       />
                       <span className="text-[10px] text-slate-400 block">
