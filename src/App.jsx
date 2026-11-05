@@ -1881,10 +1881,10 @@ export default function App() {
     });
 
     let updatedTicket = null;
-    const updated = appointments.map(app => {
-      if (app.id === ticketId) {
+    const citasActualizadas = appointments.map(cita => {
+      if (cita.id === ticketId) {
         updatedTicket = {
-          ...app,
+          ...cita,
           prescriptionText: prescription,
           prescriptionDate: prescriptionDate,
           status: 'Completado',
@@ -1892,11 +1892,16 @@ export default function App() {
         };
         return updatedTicket;
       }
-      return app;
+      return cita;
     });
 
-    setAppointments(updated);
-    broadcastSyncAppointments(updated);
+    setAppointments(citasActualizadas);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_CITAS_KEY, JSON.stringify(citasActualizadas));
+    } catch (e) {
+      console.warn('Error al guardar citas en localStorage:', e);
+    }
+    broadcastSyncAppointments(citasActualizadas);
 
     setActiveVideoCall(null);
     setDoctorPrescriptionText('');
@@ -1910,8 +1915,9 @@ export default function App() {
 
   const handleDoctorEmitPrescription = emitirReceta;
 
-  // Filter appointments for Doctor Panel
-  const doctorAppointments = selectedDoctorId === 'all' ? appointments : appointments.filter(a => !selectedDoctorId || a.doctor === selectedDoctorId);
+  // Filter appointments for Doctor Panel: Citas pendientes excluyendo las completadas
+  const citasPendientes = appointments.filter(cita => cita.estado !== 'Completado');
+  const doctorAppointments = selectedDoctorId === 'all' ? citasPendientes : citasPendientes.filter(a => !selectedDoctorId || a.doctor === selectedDoctorId);
 
   // Turnos para el Paciente: Vinculación estricta al perfil del paciente activo (filtrado por celular o nombre)
   const activePatientAppointments = appointments.filter(app => {
@@ -3594,11 +3600,11 @@ export default function App() {
                 Pacientes Agendados para {selectedDoctorId}
               </h3>
               <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700">
-                {doctorAppointments.length} Pacientes en Agenda
+                {citasPendientes.filter(a => selectedDoctorId === 'all' || !selectedDoctorId || a.doctor === selectedDoctorId).length} Pacientes en Agenda
               </span>
             </div>
 
-            {doctorAppointments.length === 0 ? (
+            {citasPendientes.filter(a => selectedDoctorId === 'all' || !selectedDoctorId || a.doctor === selectedDoctorId).length === 0 ? (
               <div className="bg-white rounded-3xl p-10 text-center border border-slate-200 text-slate-500 space-y-2">
                 <Clock className="w-8 h-8 mx-auto text-slate-400" />
                 <p className="font-bold text-sm text-slate-800">No hay pacientes agendados actualmente para este consultorio.</p>
@@ -3606,7 +3612,7 @@ export default function App() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {doctorAppointments.map((app) => (
+                {citasPendientes.filter(a => selectedDoctorId === 'all' || !selectedDoctorId || a.doctor === selectedDoctorId).map((app) => (
                   <div
                     key={app.id}
                     className={`bg-white rounded-3xl p-5 border shadow-soft-sm space-y-4 flex flex-col justify-between transition-all ${
