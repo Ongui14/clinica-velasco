@@ -250,6 +250,8 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
 
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.muted = false;
+        remoteVideoRef.current.volume = 1.0;
         remoteVideoRef.current.play().catch(() => {});
       }
 
@@ -376,13 +378,27 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
       });
     };
 
-    // 1. Obtener cámara y micrófono local
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    // 1. Obtener cámara y micrófono local con audio explícitamente activo
+    navigator.mediaDevices.getUserMedia({ 
+      video: true, 
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      } 
+    })
       .then((stream) => {
         if (!isMounted) {
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
+
+        // Asegurar explícitamente que el micrófono transmita sin restricciones
+        const audioTracks = stream.getAudioTracks();
+        if (audioTracks && audioTracks.length > 0) {
+          audioTracks[0].enabled = true;
+        }
+
         localStreamRef.current = stream;
         setLocalStream(stream);
 
@@ -1341,8 +1357,8 @@ export default function App() {
       patientPhone: userProfile.phone,
       voucherRef: voucherFileName ? `Archivo: ${voucherFileName}` : 'Comprobante Adjuntado',
       voucherImage: voucherImageBase64 || null,
-      paymentStatus: 'Pendiente',
-      status: 'Pendiente'
+      paymentStatus: 'Pendiente de Validación por Caja',
+      status: 'Pendiente de Validación por Caja'
     };
 
     const updated = [newTicket, ...appointments];
@@ -2668,11 +2684,17 @@ export default function App() {
                             <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
                               ticket.paymentStatus === 'Confirmado' || ticket.paymentStatus === 'Verificado y Aprobado' 
                                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
-                                : 'bg-amber-100 text-amber-900 border border-amber-200 animate-pulse'
+                                : 'bg-amber-100 text-amber-900 border border-amber-200'
                             }`}>
-                              {ticket.paymentStatus === 'Confirmado' || ticket.paymentStatus === 'Verificado y Aprobado' ? '✓ Pago Confirmado' : '⏳ Pendiente Caja/Admin'}
+                              {ticket.paymentStatus === 'Confirmado' || ticket.paymentStatus === 'Verificado y Aprobado' ? '✓ Pago Confirmado' : '⏳ Pendiente de Validación por Caja'}
                             </span>
                           </div>
+                          {!(ticket.paymentStatus === 'Confirmado' || ticket.paymentStatus === 'Verificado y Aprobado') && (
+                            <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200/90 flex items-center gap-2 text-[11px] text-amber-900 font-bold">
+                              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+                              <span>Comprobante enviado. Esperando confirmación de la clínica...</span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Botón de Videoconsulta o Descarga de Receta Médica */}
@@ -3044,13 +3066,22 @@ export default function App() {
                             <Receipt className="w-3 h-3 text-clinic-emerald" /> Voucher:
                           </span>
                           {app.voucherImage ? (
-                            <button
-                              type="button"
-                              onClick={() => setViewingVoucherModal(app)}
-                              className="font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-300 text-[11px] flex items-center gap-1 cursor-pointer transition-all"
-                            >
-                              <ImageIcon className="w-3 h-3 text-emerald-600" /> Ver Captura QR
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <img
+                                src={app.voucherImage}
+                                alt="Miniatura QR"
+                                onClick={() => setViewingVoucherModal(app)}
+                                className="w-9 h-9 rounded-lg object-cover border-2 border-emerald-400 cursor-pointer shadow-sm hover:scale-105 transition-transform shrink-0"
+                                title="Clic para ampliar comprobante QR"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setViewingVoucherModal(app)}
+                                className="font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded-lg border border-emerald-300 text-[11px] flex items-center gap-1 cursor-pointer transition-all"
+                              >
+                                <ImageIcon className="w-3.5 h-3.5 text-emerald-600" /> Ver Comprobante QR
+                              </button>
+                            </div>
                           ) : (
                             <span className="font-bold text-slate-800 bg-white px-2 py-0.5 rounded-md border border-slate-200 text-[11px] truncate max-w-[180px]">
                               {app.voucherRef || 'Sin comprobante'}
@@ -3112,15 +3143,24 @@ export default function App() {
                           </td>
                           <td className="py-3 px-3">
                             {app.voucherImage ? (
-                              <button
-                                type="button"
-                                onClick={() => setViewingVoucherModal(app)}
-                                className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg text-[11px] border border-emerald-300 shadow-sm cursor-pointer transition-all"
-                                title="Ver comprobante subido"
-                              >
-                                <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>Ver Comprobante</span>
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={app.voucherImage}
+                                  alt="Miniatura QR"
+                                  onClick={() => setViewingVoucherModal(app)}
+                                  className="w-9 h-9 rounded-lg object-cover border-2 border-emerald-400 cursor-pointer shadow-sm hover:scale-105 transition-transform shrink-0"
+                                  title="Clic para ampliar comprobante QR"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setViewingVoucherModal(app)}
+                                  className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg text-[11px] border border-emerald-300 shadow-sm cursor-pointer transition-all"
+                                  title="Ver comprobante subido"
+                                >
+                                  <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Ver Comprobante QR</span>
+                                </button>
+                              </div>
                             ) : (
                               <span className="inline-flex items-center gap-1 font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-lg text-[11px]">
                                 <Receipt className="w-3 h-3 text-clinic-emerald" />
@@ -4128,13 +4168,14 @@ export default function App() {
             </div>
 
             <div className="space-y-2.5 pt-1">
-              <button
-                onClick={() => handleSendVoucherToAdmin(bookingSuccessModal)}
-                className="w-full py-3.5 bg-clinic-emerald hover:bg-clinic-emeraldHover text-white font-extrabold text-sm rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
-              >
-                <Send className="w-4 h-4" />
-                <span>Enviar Comprobante al Admin por WhatsApp</span>
-              </button>
+              <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-center space-y-1">
+                <span className="text-xs font-bold text-emerald-900 flex items-center justify-center gap-1">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Comprobante Recibido con Éxito
+                </span>
+                <p className="text-[11px] text-emerald-700 font-medium">
+                  Comprobante enviado. Esperando confirmación de la clínica...
+                </p>
+              </div>
 
               <button
                 onClick={() => handleShareWhatsAppTicket(bookingSuccessModal)}
@@ -4149,7 +4190,7 @@ export default function App() {
                   setBookingSuccessModal(null);
                   setActiveTab('turnos');
                 }}
-                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer transition-all"
+                className="w-full py-3 bg-clinic-dark hover:bg-clinic-dark/90 text-white font-bold text-xs rounded-xl cursor-pointer transition-all shadow-md"
               >
                 Ver en Mis Citas
               </button>
@@ -4232,14 +4273,16 @@ export default function App() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black uppercase tracking-wider text-teal-400 bg-teal-950/80 border border-teal-800/80 px-2 py-0.5 rounded-full inline-block">
-                      Videoconsulta Segura
+                      {systemRole === 'medico' ? 'Atención Médica' : 'Teleconsulta Médica'}
                     </span>
                     <span className="text-[10px] text-slate-400 hidden xs:inline">
                       Ficha {activeVideoCall.id}
                     </span>
                   </div>
                   <h3 className="text-xs sm:text-sm font-extrabold text-white truncate">
-                    {activeVideoCall.doctor} • {activeVideoCall.specialty}
+                    {systemRole === 'medico' 
+                      ? `Paciente: ${activeVideoCall.patientName}${activeVideoCall.beneficiaryName ? ` (Menor: ${activeVideoCall.beneficiaryName})` : ''}` 
+                      : `${activeVideoCall.doctor} • ${activeVideoCall.specialty}`}
                   </h3>
                 </div>
               </div>
