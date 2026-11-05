@@ -197,14 +197,30 @@ function getSpecialtyIcon(iconName, className = "w-6 h-6") {
 }
 
 const DOCTOR_PEER_ID = "clinica-velasco-host-medico-activo";
-const peerConfig = {
+const peerOptions = {
   config: {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' }
+      { urls: 'stun:stun1.l.google.com:19302' },
+      {
+        urls: 'turn:openrelay.metered.ca:80',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      },
+      {
+        urls: 'turn:openrelay.metered.ca:443',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      },
+      {
+        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      }
     ]
   }
 };
+const peerConfig = peerOptions;
 
 // Componente de Sala de Videoconsulta Nativa WebRTC con PeerJS
 function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
@@ -266,7 +282,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
         peerRef.current = null;
       }
 
-      const peer = new Peer(DOCTOR_PEER_ID, peerConfig);
+      const peer = new Peer(DOCTOR_PEER_ID, peerOptions);
       peerRef.current = peer;
 
       peer.on('open', (id) => {
@@ -316,7 +332,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
       }
 
       // ID aleatorio automático para evitar colisiones en dispositivos móviles
-      const peer = new Peer(undefined, peerConfig);
+      const peer = new Peer(undefined, peerOptions);
       peerRef.current = peer;
 
       peer.on('open', (id) => {
@@ -1041,7 +1057,7 @@ export default function App() {
         syncPeerRef.current = null;
       }
 
-      const clientPeer = new Peer(undefined, peerConfig);
+      const clientPeer = new Peer(undefined, peerOptions);
       syncPeerRef.current = clientPeer;
 
       clientPeer.on('open', () => {
@@ -1068,7 +1084,7 @@ export default function App() {
         syncPeerRef.current = null;
       }
 
-      const hubPeer = new Peer(SYNC_HUB_ID, peerConfig);
+      const hubPeer = new Peer(SYNC_HUB_ID, peerOptions);
       syncPeerRef.current = hubPeer;
 
       hubPeer.on('open', () => {});
