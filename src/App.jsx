@@ -484,7 +484,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
   };
 
   return (
-    <div className="relative w-full h-full bg-slate-950 overflow-hidden flex items-center justify-center">
+    <div className="relative w-full h-[50vh] min-h-[350px] md:h-[600px] bg-black rounded-xl overflow-hidden shadow-lg flex items-center justify-center">
       {/* Video Remoto SIEMPRE MONTADO en el DOM con reproducción inline */}
       <video
         ref={remoteVideoRef}
@@ -549,7 +549,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
 
       {/* Video Local en Recuadro Flotante (Picture-in-Picture en esquina inferior derecha) */}
       {localStream && (
-        <div className="absolute bottom-20 right-4 w-28 h-40 md:w-36 md:h-48 rounded-xl overflow-hidden shadow-2xl border-2 border-emerald-500 z-30 bg-slate-900 group">
+        <div className="absolute top-4 right-4 w-24 h-36 md:w-32 md:h-48 bg-gray-800 rounded-xl overflow-hidden border-2 border-emerald-500 shadow-xl z-20 object-cover group">
           <video
             ref={localVideoRef}
             autoPlay
@@ -571,12 +571,12 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
       )}
 
       {/* Barra Flotante de Controles Nativos de Clínica Velasco */}
-      <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 z-40 flex items-center gap-3 bg-slate-900/90 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-700/80 shadow-2xl">
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-3 z-30 bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-full shadow-2xl border border-slate-700/60">
         {/* Activar / Silenciar Micrófono */}
         <button
           type="button"
           onClick={toggleMic}
-          className={`p-3 rounded-xl transition-all flex items-center justify-center cursor-pointer ${
+          className={`p-2.5 sm:p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${
             isMicMuted 
               ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/40' 
               : 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-600'
@@ -590,7 +590,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
         <button
           type="button"
           onClick={toggleVideo}
-          className={`p-3 rounded-xl transition-all flex items-center justify-center cursor-pointer ${
+          className={`p-2.5 sm:p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${
             isVideoMuted 
               ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/40' 
               : 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-600'
@@ -604,7 +604,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
         <button
           type="button"
           onClick={handleHangUp}
-          className="px-4 py-3 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-red-900/40"
+          className="px-3.5 py-2.5 sm:px-4 sm:py-3 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-red-900/40"
           title="Colgar y salir de la teleconsulta"
         >
           <PhoneOff className="w-5 h-5" />
@@ -4305,10 +4305,10 @@ export default function App() {
             </div>
 
             {/* Contenedor Principal (Pantalla dividida en modo médico / pantalla completa en modo paciente) */}
-            <div className="relative flex-1 w-full h-full bg-slate-950 overflow-hidden flex flex-col lg:flex-row">
+            <div className="relative flex-1 w-full h-full bg-slate-950 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row">
               
               {/* Columna Izquierda: Video WebRTC Nativo con PeerJS */}
-              <div className="relative flex-1 w-full h-full bg-slate-950 overflow-hidden">
+              <div className="relative flex-1 w-full bg-slate-950 overflow-hidden flex flex-col items-center justify-center p-2 sm:p-3">
                 <WebRTCVideoCall
                   activeVideoCall={activeVideoCall}
                   systemRole={systemRole}
