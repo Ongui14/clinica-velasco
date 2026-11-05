@@ -501,7 +501,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
   };
 
   return (
-    <div className="relative w-full h-[65vh] min-h-[400px] md:h-[600px] bg-slate-900 rounded-xl overflow-hidden shadow-2xl">
+    <div className="relative w-full h-[350px] sm:h-[450px] md:h-[600px] bg-slate-900 rounded-xl overflow-hidden shadow-2xl flex-shrink-0">
       {/* Video Remoto SIEMPRE MONTADO en el DOM con reproducción inline */}
       <video
         ref={remoteVideoRef}
@@ -564,7 +564,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
 
       {/* Video Local en Recuadro Flotante (Picture-in-Picture en esquina inferior derecha) */}
       {localStream && (
-        <div className="absolute top-4 right-4 w-24 h-36 sm:w-28 sm:h-40 bg-black rounded-lg overflow-hidden border-2 border-emerald-500 shadow-xl z-20">
+        <div className="absolute top-3 right-3 w-20 h-28 sm:w-28 sm:h-40 bg-black rounded-lg overflow-hidden border-2 border-emerald-500 shadow-xl z-40">
           <video
             ref={localVideoRef}
             autoPlay
@@ -586,12 +586,12 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
       )}
 
       {/* Barra Flotante de Controles Nativos de Clínica Velasco */}
-      <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center gap-4 z-30 pointer-events-none">
+      <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-4 z-50">
         {/* Activar / Silenciar Micrófono */}
         <button
           type="button"
           onClick={toggleMic}
-          className={`pointer-events-auto p-2.5 sm:p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${
+          className={`p-2.5 sm:p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${
             isMicMuted 
               ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/40' 
               : 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-600'
@@ -605,7 +605,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
         <button
           type="button"
           onClick={toggleVideo}
-          className={`pointer-events-auto p-2.5 sm:p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${
+          className={`p-2.5 sm:p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${
             isVideoMuted 
               ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/40' 
               : 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-600'
@@ -619,7 +619,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
         <button
           type="button"
           onClick={handleHangUp}
-          className="pointer-events-auto px-3.5 py-2.5 sm:px-4 sm:py-3 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-red-900/40"
+          className="px-3.5 py-2.5 sm:px-4 sm:py-3 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-red-900/40"
           title="Colgar y salir de la teleconsulta"
         >
           <PhoneOff className="w-5 h-5" />
