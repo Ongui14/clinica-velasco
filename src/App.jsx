@@ -227,8 +227,8 @@ const peerConfig = peerOptions;
 function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
   const [localStream, setLocalStream] = useState(null);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
-  const [isMicMuted, setIsMicMuted] = useState(false);
-  const [isVideoMuted, setIsVideoMuted] = useState(false);
+  const [isMicOn, setIsMicOn] = useState(true);
+  const [isCamOn, setIsCamOn] = useState(true);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -453,29 +453,40 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
     };
   }, [isDoctor]);
 
-  // Controles de Micrófono
+  // Lógica de Toggle: Silenciar y Activar Micrófono
   const toggleMic = () => {
-    if (localStreamRef.current) {
-      const audioTracks = localStreamRef.current.getAudioTracks();
-      if (audioTracks.length > 0) {
-        const nextState = !isMicMuted;
-        audioTracks[0].enabled = !nextState;
-        setIsMicMuted(nextState);
+    if (localVideoRef.current && localVideoRef.current.srcObject) {
+      const audioTrack = localVideoRef.current.srcObject.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMicOn(audioTrack.enabled);
+      }
+    } else if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMicOn(audioTrack.enabled);
       }
     }
   };
 
-  // Controles de Cámara
-  const toggleVideo = () => {
-    if (localStreamRef.current) {
-      const videoTracks = localStreamRef.current.getVideoTracks();
-      if (videoTracks.length > 0) {
-        const nextState = !isVideoMuted;
-        videoTracks[0].enabled = !nextState;
-        setIsVideoMuted(nextState);
+  // Lógica de Toggle: Apagar y Encender Cámara
+  const toggleCam = () => {
+    if (localVideoRef.current && localVideoRef.current.srcObject) {
+      const videoTrack = localVideoRef.current.srcObject.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsCamOn(videoTrack.enabled);
+      }
+    } else if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsCamOn(videoTrack.enabled);
       }
     }
   };
+  const toggleVideo = toggleCam;
 
   // Colgar y Salir
   const handleHangUp = () => {
@@ -501,7 +512,7 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
   };
 
   return (
-    <div className="relative w-full h-[350px] sm:h-[450px] md:h-[600px] bg-slate-900 rounded-xl overflow-hidden shadow-2xl flex-shrink-0">
+    <div className="relative w-full h-[85vh] md:h-[75vh] bg-slate-900 rounded-b-xl md:rounded-xl overflow-hidden flex-shrink-0">
       {/* Video Remoto SIEMPRE MONTADO en el DOM con reproducción inline */}
       <video
         ref={remoteVideoRef}
@@ -572,54 +583,54 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
             muted
             className="w-full h-full object-cover"
           />
-          {isVideoMuted && (
+          {!isCamOn && (
             <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center text-slate-400 gap-1">
               <VideoOff className="w-5 h-5 text-red-400" />
               <span className="text-[9px] font-bold uppercase tracking-wider">Cámara apagada</span>
             </div>
           )}
           <div className="absolute bottom-1.5 left-1.5 bg-slate-950/80 backdrop-blur-sm text-[9px] font-bold text-white px-1.5 py-0.5 rounded flex items-center gap-1">
-            <span className={`w-1.5 h-1.5 rounded-full ${isMicMuted ? 'bg-red-400' : 'bg-emerald-400'}`}></span>
+            <span className={`w-1.5 h-1.5 rounded-full ${!isMicOn ? 'bg-red-400' : 'bg-emerald-400'}`}></span>
             <span>Tú ({isDoctor ? 'Dr.' : 'Paciente'})</span>
           </div>
         </div>
       )}
 
       {/* Barra Flotante de Controles Nativos de Clínica Velasco */}
-      <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-4 z-50">
-        {/* Activar / Silenciar Micrófono */}
+      <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-4 z-50">
+        {/* Botón Micrófono */}
         <button
           type="button"
           onClick={toggleMic}
-          className={`p-2.5 sm:p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${
-            isMicMuted 
-              ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/40' 
-              : 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-600'
+          className={`p-3 rounded-full text-white transition-all flex items-center justify-center cursor-pointer shadow-lg active:scale-95 ${
+            !isMicOn
+              ? 'bg-red-500 hover:bg-red-600 border border-red-400'
+              : 'bg-slate-700 hover:bg-slate-600 border border-slate-600'
           }`}
-          title={isMicMuted ? "Activar Micrófono" : "Silenciar Micrófono"}
+          title={isMicOn ? "Silenciar Micrófono" : "Activar Micrófono"}
         >
-          {isMicMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+          {!isMicOn ? <MicOff className="w-5 h-5 text-white" /> : <Mic className="w-5 h-5 text-white" />}
         </button>
 
-        {/* Encender / Apagar Cámara */}
+        {/* Botón Cámara */}
         <button
           type="button"
-          onClick={toggleVideo}
-          className={`p-2.5 sm:p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${
-            isVideoMuted 
-              ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/40' 
-              : 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-600'
+          onClick={toggleCam}
+          className={`p-3 rounded-full text-white transition-all flex items-center justify-center cursor-pointer shadow-lg active:scale-95 ${
+            !isCamOn
+              ? 'bg-red-500 hover:bg-red-600 border border-red-400'
+              : 'bg-slate-700 hover:bg-slate-600 border border-slate-600'
           }`}
-          title={isVideoMuted ? "Encender Cámara" : "Apagar Cámara"}
+          title={isCamOn ? "Apagar Cámara" : "Encender Cámara"}
         >
-          {isVideoMuted ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+          {!isCamOn ? <VideoOff className="w-5 h-5 text-white" /> : <Video className="w-5 h-5 text-white" />}
         </button>
 
-        {/* Botón Colgar / Salir */}
+        {/* Botón Finalizar */}
         <button
           type="button"
           onClick={handleHangUp}
-          className="px-3.5 py-2.5 sm:px-4 sm:py-3 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-red-900/40"
+          className="px-4 py-3 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-red-900/40"
           title="Colgar y salir de la teleconsulta"
         >
           <PhoneOff className="w-5 h-5" />
