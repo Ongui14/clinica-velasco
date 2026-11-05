@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calendar, 
   CalendarCheck, 
@@ -189,6 +189,125 @@ function getSpecialtyIcon(iconName, className = "w-6 h-6") {
     case 'HeartPulse': return <HeartPulse className={className} />;
     default: return <Stethoscope className={className} />;
   }
+}
+
+// Componente de Sala de Videoconsulta usando Jitsi External API
+function JitsiVideoCall({ 
+  activeVideoCall, 
+  systemRole, 
+  userProfile, 
+  setIsVideoLoaded, 
+  onClose 
+}) {
+  const containerRef = useRef(null);
+  const apiRef = useRef(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    let fallbackTimer = null;
+    const cita = activeVideoCall;
+
+    const initJitsi = () => {
+      if (!isMounted || !containerRef.current || !window.JitsiMeetExternalAPI) return;
+
+      // Limpiar contenedor previo
+      containerRef.current.innerHTML = '';
+
+      const userName = systemRole === 'medico'
+        ? (cita.doctor || 'Médico Especialista')
+        : (userProfile?.name || cita.patientName || 'Paciente');
+
+      const options = {
+        roomName: `ClinicaVelasco_Teleconsulta_${cita.id}`,
+        parentNode: containerRef.current,
+        width: '100%',
+        height: '100%',
+        userInfo: {
+          displayName: userName
+        },
+        configOverwrite: {
+          prejoinPageEnabled: false,
+          startWithAudioMuted: false,
+          startWithVideoMuted: false,
+          disableDeepLinking: true
+        },
+        interfaceConfigOverwrite: {
+          SHOW_JITSI_WATERMARK: false,
+          SHOW_WATERMARK_FOR_GUESTS: false,
+          MOBILE_APP_PROMO: false,
+          DISABLE_JOIN_LEAVE_NOTIFICATIONS: true
+        }
+      };
+
+      try {
+        const api = new window.JitsiMeetExternalAPI('meet.jit.si', options);
+        apiRef.current = api;
+
+        api.addEventListener('videoConferenceJoined', () => {
+          if (isMounted) {
+            setIsVideoLoaded(true);
+          }
+        });
+
+        // Fallback para ocultar la pantalla de carga si el evento tarda
+        fallbackTimer = setTimeout(() => {
+          if (isMounted) {
+            setIsVideoLoaded(true);
+          }
+        }, 3500);
+
+        api.addEventListener('readyToClose', () => {
+          if (isMounted && onClose) {
+            onClose();
+          }
+        });
+      } catch (error) {
+        console.error('Error inicializando Jitsi Meet API:', error);
+        if (isMounted) {
+          setIsVideoLoaded(true);
+        }
+      }
+    };
+
+    // Carga dinámica del script de Jitsi External API si no está disponible
+    if (!window.JitsiMeetExternalAPI) {
+      const existingScript = document.querySelector('script[src="https://meet.jit.si/external_api.js"]');
+      if (existingScript) {
+        existingScript.addEventListener('load', initJitsi);
+      } else {
+        const script = document.createElement('script');
+        script.src = 'https://meet.jit.si/external_api.js';
+        script.async = true;
+        script.onload = () => {
+          if (isMounted) initJitsi();
+        };
+        script.onerror = () => {
+          console.error('Error al cargar https://meet.jit.si/external_api.js');
+          if (isMounted) setIsVideoLoaded(true);
+        };
+        document.body.appendChild(script);
+      }
+    } else {
+      initJitsi();
+    }
+
+    return () => {
+      isMounted = false;
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      if (apiRef.current) {
+        try {
+          apiRef.current.dispose();
+        } catch (e) {
+          console.warn('Error al desmontar Jitsi API:', e);
+        }
+        apiRef.current = null;
+      }
+    };
+  }, [activeVideoCall, systemRole, userProfile, setIsVideoLoaded, onClose]);
+
+  return (
+    <div id="jitsi-container" ref={containerRef} className="w-full h-full" />
+  );
 }
 
 export default function App() {
@@ -3559,13 +3678,16 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Iframe oficial de Jitsi Meet embebido */}
-                <iframe
-                  title="Sala de Videoconsulta Jitsi"
-                  src={`https://meet.jit.si/ClinicaVelasco_Teleconsulta_${activeVideoCall.id}#config.disableDeepLinking=true&config.prejoinPageEnabled=false&interfaceConfig.SHOW_JITSI_WATERMARK=false&interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false&interfaceConfig.SHOW_BRAND_WATERMARK=false&interfaceConfig.MOBILE_APP_PROMO=false`}
-                  allow="camera; microphone; fullscreen; display-capture; autoplay"
-                  onLoad={() => setIsVideoLoaded(true)}
-                  className="w-full h-full border-0"
+                {/* Contenedor oficial de Jitsi Meet usando la API Externa (JitsiMeetExternalAPI) */}
+                <JitsiVideoCall
+                  activeVideoCall={activeVideoCall}
+                  systemRole={systemRole}
+                  userProfile={userProfile}
+                  setIsVideoLoaded={setIsVideoLoaded}
+                  onClose={() => {
+                    setActiveVideoCall(null);
+                    setIsVideoLoaded(false);
+                  }}
                 />
 
               </div>
