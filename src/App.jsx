@@ -1766,6 +1766,18 @@ export default function App() {
     broadcastSyncAppointments(updated);
   };
 
+  // Botón Limpiar Sistema / Reset de pruebas en Admin / Caja
+  const limpiarSistema = () => { 
+    if (window.confirm('¿Estás seguro de borrar TODAS las citas de prueba del sistema?')) { 
+      try {
+        localStorage.removeItem('appointments'); 
+        localStorage.removeItem(LOCAL_STORAGE_CITAS_KEY); 
+      } catch (e) {}
+      setAppointments([]); 
+      window.location.reload(); 
+    } 
+  };
+
   // Admin: Update a specialty field
   const handleAdminUpdateSpecialty = (specId, field, value) => {
     setSpecialtiesList(prev => prev.map(s => {
@@ -1993,8 +2005,13 @@ export default function App() {
   const citasPendientes = appointments.filter(cita => cita.estado !== 'Completado');
   const doctorAppointments = selectedDoctorId === 'all' ? citasPendientes : citasPendientes.filter(a => !selectedDoctorId || a.doctor === selectedDoctorId);
 
-  // Turnos para el Paciente: Filtrado estricto únicamente por coincidencia exacta de número de celular
-  const citasDelPaciente = appointments.filter(cita => cita.celular === sesionPaciente.celular);
+  // Turnos para el Paciente: Filtrado estricto por número de celular (coincidencia exacta o numérica)
+  const citasDelPaciente = appointments.filter(cita => {
+    if (!sesionPaciente.celular) return false;
+    const cleanSesion = (sesionPaciente.celular || '').replace(/[^0-9]/g, '');
+    const cleanCita = (cita.celular || cita.patientPhone || '').replace(/[^0-9]/g, '');
+    return cita.celular === sesionPaciente.celular || (cleanSesion && cleanCita && cleanSesion === cleanCita);
+  });
   const activePatientAppointments = citasDelPaciente;
 
   // Helper para clasificar citas según el periodo seleccionado en Caja / Admin
@@ -2772,6 +2789,12 @@ export default function App() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {citasDelPaciente.map((cita) => {
                     const ticket = cita;
+                    const estadoCita = cita.estado || (
+                      (cita.status === 'Atendido') ? 'Atendido' :
+                      (cita.status === 'Completado' || Boolean(cita.prescriptionText)) ? 'Completado' :
+                      (cita.paymentStatus === 'Confirmado' || cita.paymentStatus === 'Verificado y Aprobado' || cita.status === 'Confirmado' || cita.status === 'Programado') ? 'Confirmado' :
+                      'Pendiente'
+                    );
                     return (
                     <div
                       key={ticket.id}
@@ -2862,14 +2885,14 @@ export default function App() {
                           <div className="flex items-center justify-between pt-1 border-t border-emerald-100">
                             <span className="text-slate-500 font-semibold text-[11px]">Estado de Verificación:</span>
                             <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                              ticket.paymentStatus === 'Confirmado' || ticket.paymentStatus === 'Verificado y Aprobado' 
+                              estadoCita === 'Confirmado' || estadoCita === 'Atendido' || estadoCita === 'Completado'
                                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
                                 : 'bg-amber-100 text-amber-900 border border-amber-200'
                             }`}>
-                              {ticket.paymentStatus === 'Confirmado' || ticket.paymentStatus === 'Verificado y Aprobado' ? '✓ Pago Confirmado' : '⏳ Pendiente de Validación por Caja'}
+                              {estadoCita === 'Confirmado' || estadoCita === 'Atendido' || estadoCita === 'Completado' ? '✓ Pago Confirmado' : '⏳ Pendiente de Validación por Caja'}
                             </span>
                           </div>
-                          {!(ticket.paymentStatus === 'Confirmado' || ticket.paymentStatus === 'Verificado y Aprobado') && (
+                          {estadoCita === 'Pendiente' && (
                             <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200/90 flex items-center gap-2 text-[11px] text-amber-900 font-bold">
                               <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
                               <span>Comprobante enviado. Esperando confirmación de la clínica...</span>
@@ -2879,7 +2902,7 @@ export default function App() {
 
                         {/* Botón de Acción según Estado */}
                         <div>
-                          {cita.estado === 'Atendido' || cita.estado === 'Completado' ? (
+                          {estadoCita === 'Atendido' || estadoCita === 'Completado' ? (
                             <button 
                               type="button"
                               onClick={() => descargarRecetaPaciente(cita)} 
@@ -2887,7 +2910,7 @@ export default function App() {
                             > 
                               📄 Descargar Receta Médica 
                             </button>
-                          ) : cita.estado === 'Confirmado' ? (
+                          ) : estadoCita === 'Confirmado' ? (
                             <button
                               type="button"
                               onClick={() => handleOpenVideoCall(cita)}
@@ -2973,13 +2996,23 @@ export default function App() {
               </div>
             </div>
 
-            <button
-              onClick={() => setSystemRole('paciente')}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all cursor-pointer"
-            >
-              <User className="w-4 h-4" />
-              <span>Ver como Paciente</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={limpiarSistema}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-700 hover:text-red-800 border border-red-200 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs hover:shadow"
+                title="Borrar todas las citas de prueba y reiniciar el entorno"
+              >
+                <span>🗑️ Limpiar Base de Datos (Pruebas)</span>
+              </button>
+              <button
+                onClick={() => setSystemRole('paciente')}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                <User className="w-4 h-4" />
+                <span>Ver como Paciente</span>
+              </button>
+            </div>
           </div>
 
                     {/* ========================================================
@@ -3200,9 +3233,19 @@ export default function App() {
                   Lista en vivo de turnos solicitados para validar pagos y orientar al paciente al llegar.
                 </p>
               </div>
-              <span className="self-start sm:self-center text-xs font-black px-3 py-1 rounded-full bg-clinic-light text-clinic-dark">
-                {appointments.length} Cita{appointments.length === 1 ? '' : 's'} Registrada{appointments.length === 1 ? '' : 's'}
-              </span>
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                <button
+                  type="button"
+                  onClick={limpiarSistema}
+                  className="inline-flex items-center gap-1 text-[11px] px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 hover:text-red-800 border border-red-200 rounded-xl font-bold transition-all cursor-pointer shadow-xs hover:shadow"
+                  title="Borrar todas las citas de prueba y reiniciar el entorno"
+                >
+                  <span>🗑️ Limpiar Base de Datos (Pruebas)</span>
+                </button>
+                <span className="text-xs font-black px-3 py-1 rounded-full bg-clinic-light text-clinic-dark">
+                  {appointments.length} Cita{appointments.length === 1 ? '' : 's'} Registrada{appointments.length === 1 ? '' : 's'}
+                </span>
+              </div>
             </div>
 
             {appointments.length === 0 ? (
