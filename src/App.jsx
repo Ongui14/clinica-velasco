@@ -24,7 +24,6 @@ import {
   Send, 
   Sparkles, 
   ArrowRight, 
-  LogOut, 
   Navigation, 
   Car, 
   Ambulance, 
@@ -1290,7 +1289,6 @@ export default function App() {
   // Estados del Módulo Financiero y Cierre de Caja (Admin / Caja)
   const [financialPeriod, setFinancialPeriod] = useState('hoy'); // 'hoy' | 'semana' | 'mes'
   const [showPrintReportModal, setShowPrintReportModal] = useState(false);
-  const [selectedTicketForPrint, setSelectedTicketForPrint] = useState(null);
 
   // Estado para la sala de Videoconsulta Nativa WebRTC (PeerJS)
   const [activeVideoCall, setActiveVideoCall] = useState(null);
@@ -1327,17 +1325,7 @@ export default function App() {
     setUserProfile(profile);
   };
 
-  const handleLogout = () => {
-    try {
-      localStorage.removeItem(LOCAL_STORAGE_PACIENTE_SESION_KEY);
-      localStorage.removeItem(LOCAL_STORAGE_USER_KEY);
-    } catch (err) {}
-    setUserProfile(null);
-    setInputName('');
-    setInputPhone('');
-    setActiveTab('inicio');
-    window.location.reload();
-  };
+
 
   // Open Specialty Booking
   const handleOpenSpecialtyBooking = (spec) => {
@@ -2116,20 +2104,8 @@ export default function App() {
             <VelascoLogo iconOnly={false} className="h-8 sm:h-10" />
           </div>
 
-          {/* Header Right Actions: Únicamente Acceso Personal y Salir */}
+          {/* Header Right Actions: Acceso Personal Clínico */}
           <div className="flex items-center gap-2 shrink-0">
-            {systemRole === 'paciente' && userProfile && (
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex items-center gap-1 px-2.5 py-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all cursor-pointer text-xs"
-                title="Cerrar sesión"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden md:inline text-[11px] font-medium">Salir</span>
-              </button>
-            )}
-            
             {/* Botón Selector de Rol / Modo Personal Clínico */}
             <button
               type="button"
@@ -2382,15 +2358,6 @@ export default function App() {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="self-start sm:self-center inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-xl border border-transparent hover:border-red-200 transition-all cursor-pointer"
-                  title="Cerrar sesión en este dispositivo"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span className="text-[11px] font-medium">Cerrar sesión</span>
-                </button>
               </div>
 
 
@@ -2754,15 +2721,6 @@ export default function App() {
                   <span className="text-xs font-black px-3 py-1 rounded-full bg-clinic-light text-clinic-dark">
                     {activePatientAppointments.length} Cita{activePatientAppointments.length === 1 ? '' : 's'} Activa{activePatientAppointments.length === 1 ? '' : 's'}
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 sm:px-2.5 sm:py-1 rounded-xl transition-all cursor-pointer"
-                    title="Cerrar sesión en este dispositivo"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline font-medium">Cerrar sesión</span>
-                  </button>
                 </div>
               </div>
 
@@ -2949,18 +2907,7 @@ export default function App() {
 
                       </div>
 
-                      {/* Ticket Footer Acciones: Solo botón Guardar / Imprimir */}
-                      <div className="p-4 bg-slate-50 border-t border-slate-100">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedTicketForPrint(ticket)}
-                          className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-clinic-dark hover:bg-clinic-dark/90 text-white font-extrabold text-xs transition-all cursor-pointer shadow-md active:scale-[0.99] group"
-                          title="Guardar o imprimir Pase Médico Digital"
-                        >
-                          <Printer className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-                          <span>🖨️ Guardar / Imprimir Pase Médico</span>
-                        </button>
-                      </div>
+
                     </div>
                   );
                   })}
@@ -4622,116 +4569,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ========================================================
-          MODAL DE IMPRESIÓN / GUARDADO DE PASE MÉDICO DIGITAL (PACIENTE)
-         ======================================================== */}
-      {selectedTicketForPrint && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in overflow-y-auto">
-          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 my-auto overflow-hidden flex flex-col max-h-[92vh]">
-            
-            {/* Header del modal de impresión */}
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0 print:hidden">
-              <div className="flex items-center gap-2">
-                <Printer className="w-5 h-5 text-emerald-400" />
-                <span className="text-sm font-extrabold">Pase Médico Digital • Ficha {selectedTicketForPrint.id}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="px-3.5 py-1.5 bg-clinic-emerald hover:bg-clinic-emeraldHover text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Imprimir / PDF</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedTicketForPrint(null)}
-                  className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
 
-            {/* Documento Pase Médico para Impresión */}
-            <div className="p-6 sm:p-8 space-y-5 overflow-y-auto print:overflow-visible print:p-0 text-slate-900 font-sans">
-              
-              <div className="border-b-2 border-slate-800 pb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight">CLÍNICA VELASCO • TELEMEDICINA</h2>
-                  <p className="text-xs font-bold text-emerald-700 uppercase tracking-widest">Trinidad, Beni - Bolivia</p>
-                  <p className="text-[11px] text-slate-500">Av. Busch esq. Nicolás Suárez • Tel: 69400096</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs font-black bg-clinic-dark text-white px-3 py-1 rounded-lg block">
-                    Ficha {selectedTicketForPrint.id}
-                  </span>
-                  <span className="text-[11px] font-bold text-slate-600 block mt-1">
-                    {selectedTicketForPrint.date} • {selectedTicketForPrint.hour}
-                  </span>
-                </div>
-              </div>
-
-              {/* Datos del Paciente y Consulta */}
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-semibold">Paciente:</span>
-                  <strong className="text-slate-900 font-extrabold">{selectedTicketForPrint.patientName}</strong>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-semibold">Teléfono de contacto:</span>
-                  <span className="font-bold text-slate-800">{selectedTicketForPrint.patientPhone}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-semibold">Especialidad:</span>
-                  <strong className="text-clinic-dark font-extrabold">{selectedTicketForPrint.specialty}</strong>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-semibold">Médico Asignado:</span>
-                  <span className="font-bold text-slate-900">{selectedTicketForPrint.doctor}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-semibold">Ubicación / Consultorio:</span>
-                  <span className="font-bold text-slate-900">{selectedTicketForPrint.room}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-semibold">Tarifa de Consulta:</span>
-                  <span className="font-black text-clinic-dark">Bs. {selectedTicketForPrint.price || 150}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-semibold">Nº Comprobante / Voucher:</span>
-                  <span className="font-mono font-bold text-slate-800">{selectedTicketForPrint.voucherRef || 'Registrado'}</span>
-                </div>
-                <div className="flex justify-between items-center pt-1 border-t border-slate-200">
-                  <span className="text-slate-500 font-semibold">Estado de Pago:</span>
-                  <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                    selectedTicketForPrint.paymentStatus === 'Verificado y Aprobado'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-amber-100 text-amber-900'
-                  }`}>
-                    {selectedTicketForPrint.paymentStatus || 'Pendiente de Validación'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Guía para el paciente */}
-              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-slate-700 space-y-1">
-                <span className="font-extrabold text-clinic-dark block">🧭 Cómo llegar a su consultorio:</span>
-                <p className="text-[11px] text-slate-600 leading-relaxed">
-                  {selectedTicketForPrint.locationGuide || 'Presentarse en recepción central de Planta Baja.'}
-                </p>
-              </div>
-
-              <div className="text-[11px] text-slate-400 text-center pt-2">
-                Presente este pase en recepción o triaje 15 minutos antes de su consulta médica.
-              </div>
-
-            </div>
-
-          </div>
-        </div>
-      )}
 
       {/* ========================================================
           MODAL / VISTA DE IMPRESIÓN GERENCIAL: CIERRE DE CAJA
