@@ -717,6 +717,16 @@ export default function App() {
     return null;
   });
 
+  // Sesión del Paciente activa unificada (nombre y celular)
+  const sesionPaciente = userProfile ? {
+    ...userProfile,
+    nombre: userProfile.name || userProfile.nombre || '',
+    celular: userProfile.phone || userProfile.celular || ''
+  } : {
+    nombre: '',
+    celular: ''
+  };
+
   // Login form inputs
   const [inputName, setInputName] = useState('');
   const [inputPhone, setInputPhone] = useState('');
@@ -740,150 +750,191 @@ export default function App() {
 
   // Appointments (stored in state & localStorage)
   const [appointments, setAppointments] = useState(() => {
+    let initialList = null;
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_CITAS_KEY);
       if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.map(c => {
-          if ((c.status === 'Atendido' || c.estado === 'Atendido') && c.estado !== 'Atendido') return { ...c, estado: 'Atendido' };
-          if ((c.status === 'Completado' || c.estado === 'Completado') && c.estado !== 'Completado') return { ...c, estado: 'Completado' };
-          return c;
-        });
+        initialList = JSON.parse(saved);
       }
     } catch (e) {}
-    // Fechas dinámicas para la demostración
-    const now = new Date();
-    const dHoy = now.toISOString().slice(0, 10);
-    const dHace2Dias = new Date(now.getTime() - 2 * 86400000).toISOString().slice(0, 10);
-    const dHace4Dias = new Date(now.getTime() - 4 * 86400000).toISOString().slice(0, 10);
-    const dHace12Dias = new Date(now.getTime() - 12 * 86400000).toISOString().slice(0, 10);
-    const dHace18Dias = new Date(now.getTime() - 18 * 86400000).toISOString().slice(0, 10);
 
-    return [
-      {
-        id: 'CV-4819',
-        specialty: 'Cirugía',
-        subRole: 'Cirugía General y Laparoscópica',
-        doctor: 'Dr. Alejandro Velasco',
-        price: 150,
-        room: 'Sala Virtual Segura',
-        locationGuide: 'Videoconsulta Médica Oficial',
-        date: 'Hoy',
-        dateISO: dHoy,
-        hour: '10:00',
-        patientName: 'Ejemplo Paciente',
-        patientPhone: '72812345',
-        voucherRef: 'BNB-92841920',
-        paymentStatus: 'Verificado y Aprobado',
-        status: 'Programado'
-      },
-      {
-        id: 'CV-4822',
-        specialty: 'Pediatría',
-        subRole: 'Pediatría Integral y Neonatología',
-        doctor: 'Dra. Carmen Mendoza',
-        price: 180,
-        room: 'Sala Virtual Segura',
-        locationGuide: 'Videoconsulta Pediátrica Oficial',
-        date: 'Hoy',
-        dateISO: dHoy,
-        hour: '11:00',
-        patientName: 'Carlos Suárez Roca',
-        patientPhone: '73920194',
-        voucherRef: 'QR-5029184',
-        paymentStatus: 'Pendiente de Verificación Admin',
-        status: 'Programado'
-      },
-      {
-        id: 'CV-4825',
-        specialty: 'Neurocirugía',
-        subRole: 'Neurocirugía y Columna',
-        doctor: 'Dr. Mauricio Arce',
-        price: 250,
-        room: 'Sala Virtual Segura',
-        locationGuide: 'Videoconsulta Médica Oficial',
-        date: 'Hoy',
-        dateISO: dHoy,
-        hour: '15:30',
-        patientName: 'María Elena Justiniano',
-        patientPhone: '71029384',
-        voucherRef: 'Bisa-3819204',
-        paymentStatus: 'Verificado y Aprobado',
-        status: 'Programado'
-      },
-      {
-        id: 'CV-4790',
-        specialty: 'Pediatría',
-        subRole: 'Pediatría Integral y Neonatología',
-        doctor: 'Dra. Carmen Mendoza',
-        price: 180,
-        room: 'Sala Virtual Segura',
-        locationGuide: 'Planta Baja, Ala Materno-Infantil',
-        date: 'Hace 2 días',
-        dateISO: dHace2Dias,
-        hour: '09:15',
-        patientName: 'Mateo Vaca Rivero',
-        patientPhone: '68291039',
-        voucherRef: 'BNB-1029381',
-        paymentStatus: 'Verificado y Aprobado',
-        status: 'Atendido',
-        estado: 'Atendido'
-      },
-      {
-        id: 'CV-4785',
-        specialty: 'Terapia',
-        subRole: 'Terapia Intensiva (UTI)',
-        doctor: 'Dr. Fernando Suárez',
-        price: 300,
-        room: 'Sala Virtual Segura',
-        locationGuide: 'Piso 1, Acceso Restringido UTI',
-        date: 'Hace 4 días',
-        dateISO: dHace4Dias,
-        hour: '11:30',
-        patientName: 'Roberto Antelo Saucedo',
-        patientPhone: '72839102',
-        voucherRef: 'Transf-992019',
-        paymentStatus: 'Verificado y Aprobado',
-        status: 'Atendido',
-        estado: 'Atendido'
-      },
-      {
-        id: 'CV-4740',
-        specialty: 'Cirugía',
-        subRole: 'Cirugía General y Laparoscópica',
-        doctor: 'Dr. Alejandro Velasco',
-        price: 150,
-        room: 'Sala Virtual Segura',
-        locationGuide: 'Planta Baja, Pasillo Derecho',
-        date: 'Hace 12 días',
-        dateISO: dHace12Dias,
-        hour: '16:00',
-        patientName: 'Lucía Hurtado Paz',
-        patientPhone: '71829304',
-        voucherRef: 'Union-491029',
-        paymentStatus: 'Verificado y Aprobado',
-        status: 'Atendido',
-        estado: 'Atendido'
-      },
-      {
-        id: 'CV-4712',
-        specialty: 'Neurocirugía',
-        subRole: 'Neurocirugía y Columna',
-        doctor: 'Dr. Mauricio Arce',
-        price: 250,
-        room: 'Sala Virtual Segura',
-        locationGuide: 'Piso 1, Consultorio 202',
-        date: 'Hace 18 días',
-        dateISO: dHace18Dias,
-        hour: '17:00',
-        patientName: 'Jorge Parada Méndez',
-        patientPhone: '69481920',
-        voucherRef: 'BNB-883019',
-        paymentStatus: 'Verificado y Aprobado',
-        status: 'Atendido',
-        estado: 'Atendido'
+    if (!Array.isArray(initialList) || initialList.length === 0) {
+      // Fechas dinámicas para la demostración inicial
+      const now = new Date();
+      const dHoy = now.toISOString().slice(0, 10);
+      const dHace2Dias = new Date(now.getTime() - 2 * 86400000).toISOString().slice(0, 10);
+      const dHace4Dias = new Date(now.getTime() - 4 * 86400000).toISOString().slice(0, 10);
+      const dHace12Dias = new Date(now.getTime() - 12 * 86400000).toISOString().slice(0, 10);
+      const dHace18Dias = new Date(now.getTime() - 18 * 86400000).toISOString().slice(0, 10);
+
+      initialList = [
+        {
+          id: 'CV-4819',
+          specialty: 'Cirugía',
+          subRole: 'Cirugía General y Laparoscópica',
+          doctor: 'Dr. Alejandro Velasco',
+          price: 150,
+          room: 'Sala Virtual Segura',
+          locationGuide: 'Videoconsulta Médica Oficial',
+          date: 'Hoy',
+          dateISO: dHoy,
+          hour: '10:00',
+          nombre: 'Ejemplo Paciente',
+          patientName: 'Ejemplo Paciente',
+          celular: '72812345',
+          patientPhone: '72812345',
+          voucherRef: 'BNB-92841920',
+          paymentStatus: 'Verificado y Aprobado',
+          status: 'Confirmado',
+          estado: 'Confirmado'
+        },
+        {
+          id: 'CV-4822',
+          specialty: 'Pediatría',
+          subRole: 'Pediatría Integral y Neonatología',
+          doctor: 'Dra. Carmen Mendoza',
+          price: 180,
+          room: 'Sala Virtual Segura',
+          locationGuide: 'Videoconsulta Pediátrica Oficial',
+          date: 'Hoy',
+          dateISO: dHoy,
+          hour: '11:00',
+          nombre: 'Carlos Suárez Roca',
+          patientName: 'Carlos Suárez Roca',
+          celular: '73920194',
+          patientPhone: '73920194',
+          voucherRef: 'QR-5029184',
+          paymentStatus: 'Pendiente de Verificación Admin',
+          status: 'Pendiente',
+          estado: 'Pendiente'
+        },
+        {
+          id: 'CV-4825',
+          specialty: 'Neurocirugía',
+          subRole: 'Neurocirugía y Columna',
+          doctor: 'Dr. Mauricio Arce',
+          price: 250,
+          room: 'Sala Virtual Segura',
+          locationGuide: 'Videoconsulta Médica Oficial',
+          date: 'Hoy',
+          dateISO: dHoy,
+          hour: '15:30',
+          nombre: 'María Elena Justiniano',
+          patientName: 'María Elena Justiniano',
+          celular: '71029384',
+          patientPhone: '71029384',
+          voucherRef: 'Bisa-3819204',
+          paymentStatus: 'Verificado y Aprobado',
+          status: 'Confirmado',
+          estado: 'Confirmado'
+        },
+        {
+          id: 'CV-4790',
+          specialty: 'Pediatría',
+          subRole: 'Pediatría Integral y Neonatología',
+          doctor: 'Dra. Carmen Mendoza',
+          price: 180,
+          room: 'Sala Virtual Segura',
+          locationGuide: 'Planta Baja, Ala Materno-Infantil',
+          date: 'Hace 2 días',
+          dateISO: dHace2Dias,
+          hour: '09:15',
+          nombre: 'Mateo Vaca Rivero',
+          patientName: 'Mateo Vaca Rivero',
+          celular: '68291039',
+          patientPhone: '68291039',
+          voucherRef: 'BNB-1029381',
+          paymentStatus: 'Verificado y Aprobado',
+          status: 'Atendido',
+          estado: 'Atendido'
+        },
+        {
+          id: 'CV-4785',
+          specialty: 'Terapia',
+          subRole: 'Terapia Intensiva (UTI)',
+          doctor: 'Dr. Fernando Suárez',
+          price: 300,
+          room: 'Sala Virtual Segura',
+          locationGuide: 'Piso 1, Acceso Restringido UTI',
+          date: 'Hace 4 días',
+          dateISO: dHace4Dias,
+          hour: '11:30',
+          nombre: 'Roberto Antelo Saucedo',
+          patientName: 'Roberto Antelo Saucedo',
+          celular: '72839102',
+          patientPhone: '72839102',
+          voucherRef: 'Transf-992019',
+          paymentStatus: 'Verificado y Aprobado',
+          status: 'Atendido',
+          estado: 'Atendido'
+        },
+        {
+          id: 'CV-4740',
+          specialty: 'Cirugía',
+          subRole: 'Cirugía General y Laparoscópica',
+          doctor: 'Dr. Alejandro Velasco',
+          price: 150,
+          room: 'Sala Virtual Segura',
+          locationGuide: 'Planta Baja, Pasillo Derecho',
+          date: 'Hace 12 días',
+          dateISO: dHace12Dias,
+          hour: '16:00',
+          nombre: 'Lucía Hurtado Paz',
+          patientName: 'Lucía Hurtado Paz',
+          celular: '71829304',
+          patientPhone: '71829304',
+          voucherRef: 'Union-491029',
+          paymentStatus: 'Verificado y Aprobado',
+          status: 'Atendido',
+          estado: 'Atendido'
+        },
+        {
+          id: 'CV-4712',
+          specialty: 'Neurocirugía',
+          subRole: 'Neurocirugía y Columna',
+          doctor: 'Dr. Mauricio Arce',
+          price: 250,
+          room: 'Sala Virtual Segura',
+          locationGuide: 'Piso 1, Consultorio 202',
+          date: 'Hace 18 días',
+          dateISO: dHace18Dias,
+          hour: '17:00',
+          nombre: 'Jorge Parada Méndez',
+          patientName: 'Jorge Parada Méndez',
+          celular: '69481920',
+          patientPhone: '69481920',
+          voucherRef: 'BNB-883019',
+          paymentStatus: 'Verificado y Aprobado',
+          status: 'Atendido',
+          estado: 'Atendido'
+        }
+      ];
+    }
+
+    return initialList.map(c => {
+      const celular = c.celular || c.patientPhone || '';
+      const nombre = c.nombre || c.patientName || '';
+      let estado = c.estado || c.status || 'Pendiente';
+      if (c.estado === 'Atendido' || c.status === 'Atendido') {
+        estado = 'Atendido';
+      } else if (c.estado === 'Completado' || c.status === 'Completado') {
+        estado = 'Completado';
+      } else if (c.estado === 'Confirmado' || c.status === 'Confirmado' || c.paymentStatus === 'Confirmado' || c.paymentStatus === 'Verificado y Aprobado') {
+        estado = 'Confirmado';
+      } else if (c.estado === 'Pendiente' || c.status === 'Pendiente' || (c.paymentStatus && c.paymentStatus.toLowerCase().includes('pendiente'))) {
+        estado = 'Pendiente';
       }
-    ];
+
+      return {
+        ...c,
+        celular,
+        patientPhone: c.patientPhone || celular,
+        nombre,
+        patientName: c.patientName || nombre,
+        estado,
+        status: c.status || estado
+      };
+    });
   });
 
   // Sync appointments to localStorage
@@ -1423,10 +1474,10 @@ export default function App() {
     setVoucherError('');
 
     const patientDisplayName = beneficiaryName.trim()
-      ? `${userProfile.name} (Para: ${beneficiaryName.trim()})`
-      : userProfile.name;
+      ? `${sesionPaciente.nombre || userProfile.name} (Para: ${beneficiaryName.trim()})`
+      : (sesionPaciente.nombre || userProfile.name);
 
-    const newTicket = {
+    const nuevaCita = {
       id: `CV-${Math.floor(1000 + Math.random() * 9000)}`,
       modality: 'telemedicina',
       specialty: selectedSpecialtyForBooking.name,
@@ -1438,22 +1489,29 @@ export default function App() {
       date: selectedDateLabel,
       dateISO: new Date().toISOString().slice(0, 10),
       hour: selectedHour,
+      nombre: sesionPaciente.nombre || userProfile.name,
       patientName: patientDisplayName,
       beneficiaryName: beneficiaryName.trim() || null,
-      patientPhone: userProfile.phone,
+      celular: sesionPaciente.celular || userProfile.phone,
+      patientPhone: sesionPaciente.celular || userProfile.phone,
       voucherRef: voucherFileName ? `Archivo: ${voucherFileName}` : 'Comprobante Adjuntado',
       voucherImage: voucherImageBase64 || null,
       paymentStatus: 'Pendiente de Validación por Caja',
-      status: 'Pendiente de Validación por Caja'
+      status: 'Pendiente',
+      estado: 'Pendiente'
     };
 
-    const updated = [newTicket, ...appointments];
+    const updated = [nuevaCita, ...appointments];
     setAppointments(updated);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_CITAS_KEY, JSON.stringify(updated));
+    } catch (e) {}
     broadcastSyncAppointments(updated);
     setSelectedSpecialtyForBooking(null);
-    setBookingSuccessModal(newTicket);
+    setBookingSuccessModal(nuevaCita);
     setVoucherFileName('');
     setVoucherImageBase64(null);
+    setActiveTab('turnos');
 
     try {
       confetti({
@@ -1695,12 +1753,16 @@ export default function App() {
         return { 
           ...app, 
           paymentStatus: 'Confirmado',
-          status: 'Confirmado'
+          status: 'Confirmado',
+          estado: 'Confirmado'
         };
       }
       return app;
     });
     setAppointments(updated);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_CITAS_KEY, JSON.stringify(updated));
+    } catch (e) {}
     broadcastSyncAppointments(updated);
   };
 
@@ -1931,27 +1993,9 @@ export default function App() {
   const citasPendientes = appointments.filter(cita => cita.estado !== 'Completado');
   const doctorAppointments = selectedDoctorId === 'all' ? citasPendientes : citasPendientes.filter(a => !selectedDoctorId || a.doctor === selectedDoctorId);
 
-  // Turnos para el Paciente: Vinculación estricta al perfil del paciente activo (filtrado por celular o nombre)
-  const activePatientAppointments = appointments.filter(app => {
-    if (!userProfile) return false;
-
-    const userPhoneClean = (userProfile.phone || '').replace(/[^0-9]/g, '');
-    const userNameLower = (userProfile.name || '').toLowerCase().trim();
-    const appPhoneClean = (app.patientPhone || '').replace(/[^0-9]/g, '');
-    const appNameLower = (app.patientName || '').toLowerCase().trim();
-
-    const matchesPhone = Boolean(userPhoneClean && appPhoneClean && (userPhoneClean === appPhoneClean || userPhoneClean.endsWith(appPhoneClean) || appPhoneClean.endsWith(userPhoneClean)));
-    const matchesName = Boolean(userNameLower && appNameLower && (appNameLower.includes(userNameLower) || userNameLower.includes(appNameLower)));
-
-    if (!matchesPhone && !matchesName) return false;
-
-    const s = (app.status || '').toLowerCase().trim();
-    const e = (app.estado || '').toLowerCase().trim();
-    if (app.prescriptionText) return true; // Citas con receta disponible para descarga
-    if (s === 'completado' || e === 'completado') return true; // Mantener visible para descarga de receta
-    if (s === 'atendido' || e === 'atendido') return true; // Mantener visible para descarga de receta
-    return true;
-  });
+  // Turnos para el Paciente: Filtrado estricto únicamente por coincidencia exacta de número de celular
+  const citasDelPaciente = appointments.filter(cita => cita.celular === sesionPaciente.celular);
+  const activePatientAppointments = citasDelPaciente;
 
   // Helper para clasificar citas según el periodo seleccionado en Caja / Admin
   const getPeriodAppointments = () => {
@@ -2705,7 +2749,7 @@ export default function App() {
                 </div>
               </div>
 
-              {activePatientAppointments.length === 0 ? (
+              {citasDelPaciente.length === 0 ? (
                 <div className="bg-white rounded-3xl p-10 text-center border border-slate-200/90 shadow-soft-sm space-y-4 max-w-md mx-auto">
                   <div className="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
                     <Calendar className="w-8 h-8" />
@@ -2726,8 +2770,8 @@ export default function App() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {activePatientAppointments.map((ticket) => {
-                    const cita = ticket;
+                  {citasDelPaciente.map((cita) => {
+                    const ticket = cita;
                     return (
                     <div
                       key={ticket.id}
@@ -2833,24 +2877,33 @@ export default function App() {
                           )}
                         </div>
 
-                        {/* Botón de Videoconsulta o Descarga de Receta Médica */}
+                        {/* Botón de Acción según Estado */}
                         <div>
-                          {cita.estado === 'Atendido' || cita.estado === 'Completado' || cita.status === 'Atendido' || cita.status === 'Completado' || cita.prescriptionText ? (
+                          {cita.estado === 'Atendido' || cita.estado === 'Completado' ? (
                             <button 
+                              type="button"
                               onClick={() => descargarRecetaPaciente(cita)} 
                               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
                             > 
                               📄 Descargar Receta Médica 
                             </button>
-                          ) : (cita.estado === 'Confirmado' || cita.paymentStatus === 'Confirmado' || cita.paymentStatus === 'Verificado y Aprobado' || cita.status === 'Confirmado' || cita.status === 'Programado' || !cita.estado) && (
+                          ) : cita.estado === 'Confirmado' ? (
                             <button
                               type="button"
                               onClick={() => handleOpenVideoCall(cita)}
-                              className="w-full py-3 px-4 rounded-2xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-teal-900/20 transition-all cursor-pointer group"
+                              className="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-emerald-900/20 transition-all cursor-pointer group"
                               title="Haz clic para ingresar a la sala de videoconsulta médica"
                             >
                               <Video className="w-4 h-4 group-hover:scale-110 transition-transform" />
                               <span>📹 Ingresar a Videoconsulta en Vivo</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled
+                              className="w-full py-3 px-4 rounded-xl bg-slate-200 text-slate-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-not-allowed opacity-80 select-none border border-slate-300"
+                            >
+                              <span>⏳ Esperando validación de pago en Caja</span>
                             </button>
                           )}
                         </div>
