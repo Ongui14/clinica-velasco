@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 150" width="600" height="150">
+  <!-- Cruz Verde Oficial -->
+  <g transform="translate(10, 10) scale(0.28)">
+    <!-- Top-Left: Dark Green #046A28 -->
+    <path d="M 282 251 L 85 251 L 85 204 L 225 204 L 225 73 L 282 73 Z" fill="#046A28" />
+    <!-- Top-Right: Emerald #00AC46 -->
+    <path d="M 301 251 L 301 92 L 358 92 L 358 204 L 445 204 L 445 251 Z" fill="#00AC46" />
+    <!-- Bottom-Left: Emerald #00AC46 -->
+    <path d="M 282 270 L 139 270 L 139 317 L 225 317 L 225 433 L 282 433 Z" fill="#00AC46" />
+    <!-- Bottom-Right: Dark Green #046A28 -->
+    <path d="M 301 270 L 491 270 L 491 317 L 358 317 L 358 475 L 301 475 Z" fill="#046A28" />
+  </g>
+  <!-- Texto Oficial -->
+  <text x="160" y="72" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="38" fill="#0F172A" letter-spacing="-0.5">CLÍNICA VELASCO</text>
+  <text x="162" y="105" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="700" font-size="14" fill="#046A28" letter-spacing="1.5">ATENCIÓN MÉDICA DE ALTA COMPLEJIDAD</text>
+</svg>

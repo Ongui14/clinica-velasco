@@ -526,20 +526,12 @@ function WebRTCVideoCall({ activeVideoCall, systemRole, onClose }) {
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 z-10 px-4 text-center">
           <div className="max-w-md w-full mx-auto space-y-6 flex flex-col items-center">
             
-            {/* Isotipo de la Clínica: Círculo verde con iniciales CV y Cruz médica */}
-            <div className="relative">
-              <div className="absolute -inset-4 bg-emerald-500/20 rounded-full blur-xl opacity-80 animate-pulse"></div>
-              
-              <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-emerald-800 via-emerald-600 to-teal-500 text-white flex flex-col items-center justify-center shadow-2xl border-4 border-emerald-400/40">
-                <div className="flex items-center justify-center font-display font-black text-2xl sm:text-3xl tracking-tight leading-none text-white">
-                  CV
-                </div>
-                <div className="flex items-center gap-0.5 mt-1">
-                  <Activity className="w-3.5 h-3.5 text-emerald-200" />
-                  <span className="text-[9px] font-black tracking-widest uppercase text-emerald-100">Velasco</span>
-                </div>
-              </div>
-            </div>
+            {/* Logotipo oficial de la clínica (cruz verde con texto "CLÍNICA VELASCO" y "ATENCIÓN MÉDICA DE ALTA COMPLEJIDAD") */}
+            <img 
+              src="/logo-clinica-velasco.png" 
+              alt="Clínica Velasco - Atención Médica de Alta Complejidad" 
+              className="h-16 md:h-20 mb-6 object-contain" 
+            />
 
             {/* Texto institucional y de conexión */}
             <div className="space-y-2">
@@ -1754,142 +1746,137 @@ export default function App() {
     }));
   };
 
-  // Función de descarga de receta médica corporativa (jsPDF) para el paciente y médico
-  const descargarRecetaPaciente = (cita) => {
-    try {
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
+  // Centralización asíncrona de generación de receta médica en PDF corporativo (jsPDF) para Médico y Paciente
+  const generarRecetaPDF = async (cita) => {
+    return new Promise((resolve, reject) => {
+      try {
+        const rutaDelLogo = '/logo-clinica-velasco.png';
+        const logoImg = new Image();
+        logoImg.src = rutaDelLogo;
 
-      const todayStr = cita.fecha || cita.prescriptionDate || cita.date || new Date().toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-      });
+        const renderPDF = () => {
+          try {
+            const doc = new jsPDF({
+              orientation: 'portrait',
+              unit: 'mm',
+              format: 'a4'
+            });
 
-      // 1. Membrete e Isotipo: En la esquina superior izquierda del PDF
-      // Fondo blanco del documento con círculo esmeralda e isotipo "CV" en blanco y negrita
-      doc.setFillColor(16, 185, 129);
-      doc.circle(28, 22, 10, 'F');
+            // Carga el logo oficial en el PDF (dimensiones proporcionales 60x15)
+            try {
+              doc.addImage(logoImg, 'PNG', 15, 15, 60, 15);
+            } catch (imgErr) {
+              console.warn('Incrustando PDF sin imagen:', imgErr);
+            }
 
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
-      doc.text('CV', 28, 26.5, { align: 'center' });
+            // Diseño de la Cabecera: A la derecha del logo, imprime el nombre del médico y especialidad
+            const doctorTitle = cita.medico || cita.doctor || 'Dr. Alejandro Velasco';
+            const specialtyTitle = cita.specialty || cita.especialidad || 'Cirugía';
 
-      // Cabecera: "CLÍNICA VELASCO - Servicio de Telemedicina"
-      doc.setTextColor(15, 23, 42);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(18);
-      doc.text('CLÍNICA VELASCO', 43, 20);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.setTextColor(15, 23, 42);
+            doc.text(`${doctorTitle} - ${specialtyTitle}`, 195, 24, { align: 'right' });
 
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      doc.setTextColor(16, 185, 129);
-      doc.text('Servicio de Telemedicina', 43, 26);
+            // Línea horizontal verde corporativa (doc.setDrawColor(0, 104, 55) - Verde oscuro)
+            doc.setDrawColor(0, 104, 55);
+            doc.setLineWidth(0.8);
+            doc.line(15, 33, 195, 33);
 
-      // Eslogan oficial
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(9);
-      doc.setTextColor(100, 116, 139);
-      doc.text('“Tu salud nuestra prioridad”', 43, 31);
+            // Bloque de Datos del Paciente: Rectángulo con fondo gris muy claro
+            doc.setFillColor(245, 245, 245);
+            doc.rect(15, 40, 180, 25, 'F');
 
-      // Línea divisoria superior
-      doc.setDrawColor(226, 232, 240);
-      doc.setLineWidth(0.5);
-      doc.line(20, 36, 190, 36);
+            const patientName = cita.nombreMenor 
+              ? `${cita.nombrePaciente || cita.patientName} (Menor: ${cita.nombreMenor})` 
+              : cita.beneficiaryName 
+              ? `${cita.patientName || cita.nombrePaciente} (Beneficiario / Menor: ${cita.beneficiaryName})` 
+              : (cita.nombrePaciente || cita.patientName || 'No registrado');
 
-      // 2. Datos: "Paciente: " + cita.nombrePaciente (o nombreMenor), "Ficha: " + cita.id, "Fecha: " + cita.fecha
-      doc.setFillColor(248, 250, 252);
-      doc.setDrawColor(226, 232, 240);
-      doc.roundedRect(20, 42, 170, 26, 3, 3, 'FD');
+            const todayStr = cita.fecha || cita.prescriptionDate || cita.date || new Date().toLocaleDateString('es-ES', {
+              day: '2-digit',
+              month: 'long',
+              year: 'numeric'
+            });
 
-      const patientName = cita.nombreMenor 
-        ? `${cita.nombrePaciente || cita.patientName} (Menor: ${cita.nombreMenor})` 
-        : cita.beneficiaryName 
-        ? `${cita.patientName || cita.nombrePaciente} (Beneficiario / Menor: ${cita.beneficiaryName})` 
-        : (cita.nombrePaciente || cita.patientName || 'No registrado');
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(15, 23, 42);
 
-      const doctorName = cita.medico || cita.doctor || 'Dr. Alejandro Velasco';
+            // "Paciente: [Nombre]", "Fecha: [Fecha actual]", "Ficha: [ID de la cita]"
+            doc.text(`Paciente: ${patientName}`, 20, 50);
+            doc.text(`Fecha: ${todayStr}`, 20, 58);
+            doc.text(`Ficha: ${cita.id || 'N/A'}`, 130, 50);
 
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(15, 23, 42);
-      doc.text(`Ficha: ${cita.id}`, 26, 50);
-      doc.text(`Paciente: ${patientName}`, 26, 60);
+            // Título Central: A la altura de Y=75, imprime centrado "PRESCRIPCIÓN MÉDICA" en negrita
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.setTextColor(0, 104, 55);
+            doc.text('PRESCRIPCIÓN MÉDICA', 105, 75, { align: 'center' });
 
-      doc.text(`Fecha: ${todayStr}`, 125, 50);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9.5);
-      doc.setTextColor(71, 85, 105);
-      doc.text(`Médico: ${doctorName}`, 125, 60);
+            // Cuerpo de la Receta: A partir de Y=90, usando doc.splitTextToSize con ancho máximo 170
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10.5);
+            doc.setTextColor(15, 23, 42);
 
-      // 3. Cuerpo de la receta: cita.prescriptionText (usando doc.text con splitTextToSize)
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.setTextColor(16, 185, 129);
-      doc.text('Rp / PRESCRIPCIÓN MÉDICA E INDICACIONES:', 20, 78);
+            const prescriptionText = cita.prescriptionText || 
+              '1. Medicación preventiva e hidratación según tolerancia.\n2. Reposo relativo por 48 horas.\n3. Control y reevaluación médica si persisten síntomas.';
 
-      doc.setDrawColor(203, 213, 225);
-      doc.setLineWidth(0.4);
-      doc.rect(20, 82, 170, 125);
+            const splitText = doc.splitTextToSize(prescriptionText, 170);
+            doc.text(splitText, 15, 90);
 
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10.5);
-      doc.setTextColor(15, 23, 42);
+            // Firma Digital (Pie de página): En la parte inferior (ej. Y=250), dibuja una línea horizontal corta y centrada
+            const lineY = 250;
+            const lineStartX = 75;
+            const lineEndX = 135;
 
-      const prescriptionText = cita.prescriptionText || 
-        '1. Medicación preventiva e hidratación según tolerancia.\n2. Reposo relativo por 48 horas.\n3. Control y reevaluación médica si persisten síntomas.';
+            // Arriba de la línea, imprime "Dr. Alejandro Velasco" usando fuente "times" en estilo "italic" y tamaño grande
+            doc.setTextColor(15, 76, 129);
+            doc.setFont('times', 'italic');
+            doc.setFontSize(18);
+            doc.text(doctorTitle, 105, lineY - 4, { align: 'center' });
 
-      const splitText = doc.splitTextToSize(prescriptionText, 160);
-      doc.text(splitText, 25, 92);
+            // Línea horizontal corta y centrada
+            doc.setDrawColor(100, 116, 139);
+            doc.setLineWidth(0.5);
+            doc.line(lineStartX, lineY, lineEndX, lineY);
 
-      // 4. Pie de página: Línea de firma, "Firma Digital Validada" y nombre del Médico (cita.medico)
-      const lineY = 248;
-      const lineStartX = 75;
-      const lineEndX = 135;
+            // Debajo de la línea, con fuente normal y tamaño 8: "Firma Digital Validada - Clínica Velasco"
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(71, 85, 105);
+            doc.text('Firma Digital Validada - Clínica Velasco', 105, lineY + 6, { align: 'center' });
 
-      doc.setTextColor(15, 76, 129);
-      doc.setFont('times', 'bolditalic');
-      doc.setFontSize(18);
-      doc.text(doctorName, 105, lineY - 4, { align: 'center' });
+            doc.save('Receta_Medica_CV.pdf');
+            resolve(doc);
+          } catch (err) {
+            console.error('Error generando PDF:', err);
+            reject(err);
+          }
+        };
 
-      doc.setDrawColor(100, 116, 139);
-      doc.setLineWidth(0.5);
-      doc.line(lineStartX, lineY, lineEndX, lineY);
+        logoImg.onload = () => {
+          renderPDF();
+        };
 
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9.5);
-      doc.setTextColor(15, 23, 42);
-      doc.text(doctorName, 105, lineY + 6, { align: 'center' });
+        logoImg.onerror = () => {
+          renderPDF();
+        };
 
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.5);
-      doc.setTextColor(71, 85, 105);
-      doc.text(`Especialidad: ${cita.specialty || cita.especialidad || 'Consulta Médica'}`, 105, lineY + 11, { align: 'center' });
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(16, 185, 129);
-      doc.text('Firma Digital Validada', 105, lineY + 16, { align: 'center' });
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
-      doc.setTextColor(148, 163, 184);
-      doc.text('Clínica Velasco • Servicio Oficial de Telemedicina • Documento Digital Emitido', 105, 282, { align: 'center' });
-
-      // Finaliza con doc.save('Receta_Medica_CV.pdf')
-      doc.save('Receta_Medica_CV.pdf');
-    } catch (error) {
-      console.error('Error al generar la receta PDF:', error);
-      alert('Ocurrió un error al generar la receta en PDF. Por favor intenta de nuevo.');
-    }
+        if (logoImg.complete && logoImg.naturalWidth !== 0) {
+          renderPDF();
+        }
+      } catch (error) {
+        console.error('Error al generar la receta PDF:', error);
+        alert('Ocurrió un error al generar la receta en PDF. Por favor intenta de nuevo.');
+        reject(error);
+      }
+    });
   };
 
-  const handleGeneratePrescriptionPDF = descargarRecetaPaciente;
-  const generatePrescriptionPDF = descargarRecetaPaciente;
+  const descargarRecetaPaciente = generarRecetaPDF;
+  const handleGeneratePrescriptionPDF = generarRecetaPDF;
+  const generatePrescriptionPDF = generarRecetaPDF;
 
   // Función para emitir la receta, finalizar la consulta y bloquear la sala
   const emitirReceta = (ticketId) => {
